@@ -1,0 +1,23 @@
+# Dependências do projeto FKM v2
+# Instalar com: pip install -r requirements.txt
+
+# Manipulação de dados
+pandas>=2.0.0
+numpy>=1.24.0
+openpyxl>=3.1.0
+
+# Conexão com banco de dados SQL Server
+pyodbc>=5.0.0
+python-dotenv>=1.0.0
+
+# NOTA: O pyodbc requer o driver ODBC do SQL Server instalado no sistema.
+# Para instalar no Ubuntu/WSL, execute:
+#
+#   sudo apt-get update
+#   sudo apt-get install -y unixodbc-dev
+#   curl https://packages.microsoft.com/keys/microsoft.asc | sudo apt-key add -
+#   curl https://packages.microsoft.com/config/ubuntu/$(lsb_release -rs)/prod.list | sudo tee /etc/apt/sources.list.d/mssql-release.list
+#   sudo apt-get update
+#   sudo ACCEPT_EULA=Y apt-get install -y msodbcsql18
+#
+# Ou execute o script: ./instalar_odbc.sh
