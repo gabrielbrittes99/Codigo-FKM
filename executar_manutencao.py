@@ -10,7 +10,8 @@ import pandas as pd
 from openpyxl import load_workbook
 from openpyxl.styles import Alignment, Font, PatternFill
 
-# Mapeamento de filiais (exceções forçadas desabilitadas)
+# Importar função de normalização de filiais
+from filial_mapping import normalizar_filial
 
 
 def limpar_e_converter_numero(valor):
@@ -63,8 +64,6 @@ def substituir_freguesia_por_perus(df, coluna="FILIAL"):
             .str.replace("SAO FREGUESIA", "SAO PERUS", regex=False)
         )
         print("🔄 SAO (FREGUESIA) substituído por SAO (PERUS)")
-    return df
-
     return df
 
 
@@ -298,6 +297,11 @@ else:
         print("✅ Leitura concluída com sucesso.")
 
         df = tratar_dados(df)
+
+        # Normalizar filiais (consolidar CWB ECT e BASE)
+        if nome_coluna_filial in df.columns:
+            df[nome_coluna_filial] = df[nome_coluna_filial].apply(normalizar_filial)
+            print("🔄 Filiais normalizadas (CWB ECT → CWB BASE)")
 
         # Substituir SAO FREGUESIA por SAO PERUS
         df = substituir_freguesia_por_perus(df, nome_coluna_filial)

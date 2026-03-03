@@ -13,7 +13,7 @@ from openpyxl.styles import Alignment, Font, PatternFill
 from openpyxl.utils import get_column_letter
 
 # Importar módulo de mapeamento de filiais
-from filial_mapping import aplicar_filial_manutencao, criar_mapa_filiais
+from filial_mapping import aplicar_filial_manutencao, criar_mapa_filiais, normalizar_filial
 
 
 def limpar_e_converter_numero(valor):
@@ -404,17 +404,21 @@ else:
 
         # ==================== MAPEAMENTO DE FILIAIS ====================
         print("\n" + "=" * 80)
-        print("APLICANDO PRIORIZAÇÃO DE FILIAL DE MANUTENÇÃO")
+        print("APLICANDO PRIORIZAÇÃO DE FILIAL DE MANUTENÇÃO COM LÓGICA TEMPORAL")
         print("=" * 80)
 
         # Criar mapa de filiais a partir da planilha de manutenção
         arquivo_manutencao = config.ARQUIVO_ENTRADA_MANUTENCAO
         if os.path.exists(arquivo_manutencao):
-            mapa_filiais = criar_mapa_filiais(arquivo_manutencao)
+            historico_filiais = criar_mapa_filiais(arquivo_manutencao)
 
-            # Aplicar filial de manutenção, usando garagem como fallback
+            # Aplicar filial de manutenção com lógica temporal
             df = aplicar_filial_manutencao(
-                df, mapa_filiais, coluna_placa="Placa", coluna_garagem="Garagem"
+                df, 
+                historico_filiais, 
+                coluna_placa="Placa", 
+                coluna_garagem="Garagem",
+                coluna_data="Data da transacao"
             )
 
             # Usar Filial_Final para agrupamento
@@ -428,7 +432,8 @@ else:
         df = substituir_freguesia_por_perus(df, nome_coluna_filial)
 
         # Corrigir postos específicos de CSC para filiais corretas
-        df = corrigir_filial_por_posto(df, nome_coluna_filial, "Estabelecimento")
+        # DESABILITADO: mapeamento de postos por enquanto não utilizado
+        # df = corrigir_filial_por_posto(df, nome_coluna_filial, "Estabelecimento")
 
         if nome_coluna_filial not in df.columns:
             print(f"\n❌ ERRO: A coluna '{nome_coluna_filial}' não foi encontrada.")

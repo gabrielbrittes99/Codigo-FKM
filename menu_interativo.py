@@ -120,6 +120,7 @@ def menu_principal():
         print("3. Processar TUDO (Combustível + Manutenção)")
         print("4. Verificar Configuração")
         print("5. Alterar Mês/Ano de Fechamento")
+        print("6. Gerar RELATÓRIO DE KPIs")
         print("0. Sair")
         print("-" * 80)
 
@@ -210,6 +211,15 @@ def menu_principal():
             print('    MES = "Janeiro"')
             print('    ANO = "2026"')
 
+            input("\n\nPressione ENTER para voltar ao menu...")
+
+        elif escolha == "6":
+            if not arquivos_ok:
+                print("\n❌ Não é possível gerar KPIs: arquivos ausentes!")
+                input("\nPressione ENTER para continuar...")
+                continue
+
+            executar_script("gerar_relatorio_kpis.py", "Geração de Relatório de KPIs")
             input("\n\nPressione ENTER para voltar ao menu...")
 
         elif escolha == "0":

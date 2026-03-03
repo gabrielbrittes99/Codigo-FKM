@@ -111,10 +111,58 @@ def diagnosticar_placa(placa_busca):
                 return None
         else:
             print(f"\n   ✅ Filial válida (GRITSCH, RATEIO, etc.)")
-            print(f"   → Esta filial SUBSTITUI a garagem original")
+            
+            # NOVA LÓGICA: Verificar datas
+            if "DataEmissao" in df_placa.columns:
+                df_placa_copy = df_placa.copy()
+                df_placa_copy["DataEmissao"] = pd.to_datetime(
+                    df_placa_copy["DataEmissao"], dayfirst=True, format='mixed', errors='coerce'
+                )
+                data_mais_recente_manut = df_placa_copy["DataEmissao"].max()
+                
+                if pd.notna(data_mais_recente_manut):
+                    print(f"   📅 Data mais recente de manutenção: {data_mais_recente_manut.strftime('%d/%m/%Y')}")
+                    
+                    # Buscar data de combustível
+                    arquivo_combustivel = config.ARQUIVO_ENTRADA_COMBUSTIVEL
+                    if os.path.exists(arquivo_combustivel):
+                        df_comb = pd.read_excel(arquivo_combustivel)
+                        df_comb["Placa_Clean"] = (
+                            df_comb["Placa"]
+                            .astype(str)
+                            .str.replace("-", "", regex=False)
+                            .str.strip()
+                            .str.upper()
+                        )
+                        df_placa_comb = df_comb[df_comb["Placa_Clean"] == placa_normalizada]
+                        
+                        if len(df_placa_comb) > 0 and "Data da transacao" in df_placa_comb.columns:
+                            df_placa_comb_copy = df_placa_comb.copy()
+                            df_placa_comb_copy["Data da transacao"] = pd.to_datetime(
+                                df_placa_comb_copy["Data da transacao"], dayfirst=True, format='mixed', errors='coerce'
+                            )
+                            data_mais_recente_comb = df_placa_comb_copy["Data da transacao"].max()
+                            
+                            if pd.notna(data_mais_recente_comb):
+                                print(f"   📅 Data mais recente de combustível: {data_mais_recente_comb.strftime('%d/%m/%Y')}")
+                                
+                                # COMPARAÇÃO TEMPORAL
+                                print(f"\n   🔍 LÓGICA TEMPORAL:")
+                                if data_mais_recente_comb > data_mais_recente_manut:
+                                    garagem = df_placa_comb["Garagem"].mode()[0] if len(df_placa_comb["Garagem"].mode()) > 0 else "N/A"
+                                    print(f"   ✅ Combustível é MAIS RECENTE que manutenção")
+                                    print(f"   → Usará GARAGEM de combustível: {garagem}")
+                                    return None  # Retorna None para usar garagem
+                                else:
+                                    print(f"   ✅ Manutenção é MAIS RECENTE ou IGUAL ao combustível")
+                                    print(f"   → Usará FILIAL de manutenção: {filial_manutencao}")
+                                    return filial_manutencao
+            
+            print(f"   → Esta filial SUBSTITUI a garagem original (sem comparação temporal)")
             return filial_manutencao
 
     return None
+
 
 
 def buscar_em_combustivel(placa_busca):

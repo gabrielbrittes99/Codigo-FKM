@@ -92,6 +92,7 @@ DIRETORIO_BASE_SAIDA = "/home/gabriel/projetos/Arquivos FKMs"
 # Detectar automaticamente os arquivos de entrada
 ARQUIVO_ENTRADA_COMBUSTIVEL = encontrar_arquivo_entrada("Combustivel*.xlsx")
 ARQUIVO_ENTRADA_MANUTENCAO = encontrar_arquivo_entrada("Manutencao*.xlsx")
+ARQUIVO_ENTRADA_FROTA = encontrar_arquivo_entrada("Frota*.xlsx")
 
 # Nomes das pastas de saída
 PASTA_SAIDA_COMBUSTIVEL = f"COMBUSTIVEL {MES} {ANO}"
@@ -191,6 +192,15 @@ def validar_configuracao():
     else:
         print(f"❌ Nenhum arquivo de manutenção encontrado (padrão: Manutencao*.xlsx)")
         valido = False
+
+    # Validar arquivo de frota (opcional mas recomendado)
+    if ARQUIVO_ENTRADA_FROTA:
+        if os.path.exists(ARQUIVO_ENTRADA_FROTA):
+            print(f"✅ Arquivo de frota encontrado: {ARQUIVO_ENTRADA_FROTA}")
+        else:
+            print(f"⚠️  Arquivo de frota não encontrado: {ARQUIVO_ENTRADA_FROTA}")
+    else:
+        print(f"⚠️  Nenhum arquivo de frota encontrado (padrão: Frota*.xlsx) - KPIs por grupo indisponíveis")
 
     # Validar diretório de saída
     print(f"\n📁 Diretórios de saída:")
