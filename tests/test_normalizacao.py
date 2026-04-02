@@ -1,7 +1,7 @@
 """
 Teste para verificar consolidação de filiais CWB
 """
-from filial_mapping import normalizar_filial
+from src.filial_mapping import normalizar_filial
 
 # Testes de normalização
 testes = [

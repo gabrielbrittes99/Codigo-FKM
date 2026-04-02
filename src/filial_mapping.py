@@ -11,6 +11,9 @@ import pandas as pd
 # Exceções forçadas para filiais específicas (centralizado)
 # Placas que devem SEMPRE ir para uma filial específica, independente da lógica temporal
 EXCECOES_FORCADAS = {
+    "SEW5B72": "GRITSCH - FLN",
+    "SDS3F58": "GRITSCH - CWB (BASE)",
+    "SFD5C32": "GRITSCH - SNO",
     "SEF8G22": "GRITSCH - CWB (BASE)",
     "SFA0J37": "GRITSCH - CWB (BASE)",
     "SFD3E82": "GRITSCH - MATRIZ",
@@ -18,10 +21,18 @@ EXCECOES_FORCADAS = {
     "SFI8F40": "GRITSCH - MATRIZ",
     "SFI8F53": "GRITSCH - CTB",       # Era MATRIZ, transferiu para CTB
     "TAS4H02": "GRITSCH - CXJ",
+    "SDU9F54": "GRITSCH - CXJ",
+    "SFI4A19": "GRITSCH - CXJ",
     "BCV9J79": "GRITSCH - CTB",
     "TBG7A13": "GRITSCH - CTB",
     "UAV5J75": "GRITSCH - PMW",
     "SFH5H88": "GRITSCH - BSB",
+    "TBK1J46": "GRITSCH - SP",
+    "SEH4I04": "GRITSCH - RVD",
+    "TAS4H09": "GRITSCH - RVD",
+    "TBK1J24": "GRITSCH - RVD",
+    "TBW9G12": "GRITSCH - POA",
+    "TBK1J34": "GRITSCH - RVD",
 }
 
 

@@ -10,7 +10,7 @@ import sys
 from datetime import datetime
 
 # Importar configurações
-import config
+from src import config
 
 
 def limpar_tela():
@@ -138,7 +138,7 @@ def menu_principal():
                 input("\nPressione ENTER para continuar...")
                 continue
 
-            executar_script("executar_resumos.py", "Processamento de Combustível")
+            executar_script("src/executar_resumos.py", "Processamento de Combustível")
             input("\n\nPressione ENTER para voltar ao menu...")
 
         elif escolha == "2":
@@ -149,7 +149,7 @@ def menu_principal():
                 input("\nPressione ENTER para continuar...")
                 continue
 
-            executar_script("executar_manutencao.py", "Processamento de Manutenção")
+            executar_script("src/executar_manutencao.py", "Processamento de Manutenção")
             input("\n\nPressione ENTER para voltar ao menu...")
 
         elif escolha == "3":
@@ -169,7 +169,7 @@ def menu_principal():
 
             if confirmar == "S":
                 sucesso_combustivel = executar_script(
-                    "executar_resumos.py", "Processamento de Combustível"
+                    "src/executar_resumos.py", "Processamento de Combustível"
                 )
 
                 if sucesso_combustivel:
@@ -181,7 +181,7 @@ def menu_principal():
                     time.sleep(2)
 
                     executar_script(
-                        "executar_manutencao.py", "Processamento de Manutenção"
+                        "src/executar_manutencao.py", "Processamento de Manutenção"
                     )
 
                 print("\n" + "=" * 80)
@@ -219,7 +219,7 @@ def menu_principal():
                 input("\nPressione ENTER para continuar...")
                 continue
 
-            executar_script("gerar_relatorio_kpis.py", "Geração de Relatório de KPIs")
+            executar_script("src/gerar_relatorio_kpis.py", "Geração de Relatório de KPIs")
             input("\n\nPressione ENTER para voltar ao menu...")
 
         elif escolha == "0":

@@ -2,7 +2,7 @@
 Teste completo de consolidação CWB com dados reais
 """
 import pandas as pd
-from filial_mapping import criar_mapa_filiais, normalizar_filial
+from src.filial_mapping import criar_mapa_filiais, normalizar_filial
 
 print("="*80)
 print("TESTE DE CONSOLIDAÇÃO CWB COM DADOS REAIS")

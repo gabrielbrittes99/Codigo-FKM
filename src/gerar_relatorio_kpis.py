@@ -10,9 +10,9 @@ from openpyxl import load_workbook
 from openpyxl.styles import Alignment, Font, PatternFill, Border, Side
 from openpyxl.utils import get_column_letter
 
-import config
-from filial_mapping import normalizar_filial, criar_mapa_filiais, aplicar_filial_manutencao
-from frota_mapping import carregar_frota, enriquecer_com_frota
+from src import config
+from src.filial_mapping import normalizar_filial, criar_mapa_filiais, aplicar_filial_manutencao
+from src.frota_mapping import carregar_frota, enriquecer_com_frota
 
 
 def limpar_numero(valor):

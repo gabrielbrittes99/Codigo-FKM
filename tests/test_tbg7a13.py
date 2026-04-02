@@ -2,7 +2,7 @@
 Teste rápido para verificar se TBG7A13 está sendo alocada para CTB
 """
 import pandas as pd
-from filial_mapping import aplicar_filial_manutencao, criar_mapa_filiais
+from src.filial_mapping import aplicar_filial_manutencao, criar_mapa_filiais
 
 # Criar mapa de filiais
 mapa_filiais, mapa_datas = criar_mapa_filiais("Manutencao 0126.xlsx")

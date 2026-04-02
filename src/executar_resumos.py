@@ -13,7 +13,7 @@ from openpyxl.styles import Alignment, Font, PatternFill
 from openpyxl.utils import get_column_letter
 
 # Importar módulo de mapeamento de filiais
-from filial_mapping import aplicar_filial_manutencao, criar_mapa_filiais, normalizar_filial
+from src.filial_mapping import aplicar_filial_manutencao, criar_mapa_filiais, normalizar_filial
 
 
 def limpar_e_converter_numero(valor):
@@ -371,7 +371,7 @@ def gerar_resumos_filial(df_filial, nome_filial, caminho_saida):
     return True
 
 
-import config
+from src import config
 
 # ==================== CONFIGURAÇÕES ====================
 print("=" * 80)

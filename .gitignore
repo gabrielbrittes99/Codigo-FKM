@@ -48,10 +48,12 @@ Thumbs.db
 # Arquivos Excel de entrada (dados sensíveis)
 Combustivel*.xlsx
 Manutencao*.xlsx
+Frota*.xlsx
+DIAGNOSTICO*.xlsx
 
 # Pastas de saída
 Arquivos FKMs/
-*.nao-utilizar/
+Dados Tratados/
 
-# Pastas do sistema
-"\\\\wsl.localhost\\"
+# Claude
+.claude/

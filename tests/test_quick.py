@@ -4,7 +4,7 @@ Teste Rápido - Validação do Sistema
 Executa validações básicas sem processar dados
 """
 
-import config
+from src import config
 
 print("=" * 80)
 print("TESTE RÁPIDO - SISTEMA DE GERAÇÃO DE FKMs")

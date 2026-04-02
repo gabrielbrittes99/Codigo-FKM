@@ -17,8 +17,8 @@ import pandas as pd
 from openpyxl import load_workbook
 from openpyxl.styles import Alignment, Font, PatternFill
 
-import config
-from filial_mapping import normalizar_filial
+from src import config
+from src.filial_mapping import normalizar_filial
 
 
 # ==================== MAPEAMENTO FILIAL → ESTADO ESPERADO ====================

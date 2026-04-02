@@ -7,8 +7,8 @@ import os
 
 import pandas as pd
 
-import config
-from filial_mapping import (
+from src import config
+from src.filial_mapping import (
     EXCECOES_FORCADAS,
     aplicar_filial_manutencao,
     criar_mapa_filiais,

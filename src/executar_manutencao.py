@@ -11,7 +11,7 @@ from openpyxl import load_workbook
 from openpyxl.styles import Alignment, Font, PatternFill
 
 # Importar função de normalização de filiais
-from filial_mapping import normalizar_filial
+from src.filial_mapping import normalizar_filial
 
 
 def limpar_e_converter_numero(valor):
@@ -82,7 +82,20 @@ def aplicar_excecoes_placa(df, coluna_filial="FILIAL", coluna_placa="Placa"):
             .str.upper()
         )
 
-    # Exceções forçadas desabilitadas - não faz nada
+    from filial_mapping import EXCECOES_FORCADAS
+    
+    # Aplica APENAS para placas que estão na lista de exceções forçadas
+    for placa, filial_correta in EXCECOES_FORCADAS.items():
+        if "Placa_Clean" in df.columns:
+            mask = df["Placa_Clean"] == placa
+        else:
+            mask = df[coluna_placa] == placa
+            
+        registros_afetados = mask.sum()
+        if registros_afetados > 0:
+            df.loc[mask, coluna_filial] = filial_correta
+            print(f"   📍 Placa {placa} forçada para filial {filial_correta} ({registros_afetados} registros de manutenção ajustados)")
+
     return df
 
 
@@ -268,7 +281,7 @@ def gerar_resumos_manutencao(df_filial, nome_filial, caminho_saida):
     return True
 
 
-import config
+from src import config
 
 # ==================== CONFIGURAÇÕES ====================
 print("=" * 80)
