@@ -55,5 +55,9 @@ DIAGNOSTICO*.xlsx
 Arquivos FKMs/
 Dados Tratados/
 
+# Planilhas organizadas
+planilhas-antigas/
+planilhas-teste/
+
 # Claude
 .claude/

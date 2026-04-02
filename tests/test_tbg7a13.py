@@ -2,20 +2,25 @@
 Teste rápido para verificar se TBG7A13 está sendo alocada para CTB
 """
 import pandas as pd
+from src import config
 from src.filial_mapping import aplicar_filial_manutencao, criar_mapa_filiais
 
+# Usar arquivos de config (detecta automaticamente o mês atual)
+print(f"📋 Testando com arquivos de {config.MES}/{config.ANO}")
+print(f"   Combustível: {config.ARQUIVO_ENTRADA_COMBUSTIVEL}")
+print(f"   Manutenção: {config.ARQUIVO_ENTRADA_MANUTENCAO}")
+
 # Criar mapa de filiais
-mapa_filiais, mapa_datas = criar_mapa_filiais("Manutencao 0126.xlsx")
+mapa_filiais = criar_mapa_filiais(config.ARQUIVO_ENTRADA_MANUTENCAO)
 
 # Ler dados de combustível
-df = pd.read_excel("Combustivel 0126.xlsx")
+df = pd.read_excel(config.ARQUIVO_ENTRADA_COMBUSTIVEL)
 
 # Aplicar mapeamento de filiais
 df = aplicar_filial_manutencao(
-    df, 
-    mapa_filiais, 
-    mapa_datas_manutencao=mapa_datas,
-    coluna_placa="Placa", 
+    df,
+    mapa_filiais,
+    coluna_placa="Placa",
     coluna_garagem="Garagem",
     coluna_data="Data da transacao"
 )

@@ -2,15 +2,21 @@
 Teste completo de consolidação CWB com dados reais
 """
 import pandas as pd
+from src import config
 from src.filial_mapping import criar_mapa_filiais, normalizar_filial
 
 print("="*80)
 print("TESTE DE CONSOLIDAÇÃO CWB COM DADOS REAIS")
 print("="*80)
 
+# Usar arquivos de config
+print(f"\n📋 Testando com arquivos de {config.MES}/{config.ANO}")
+print(f"   Manutenção: {config.ARQUIVO_ENTRADA_MANUTENCAO}")
+print(f"   Combustível: {config.ARQUIVO_ENTRADA_COMBUSTIVEL}")
+
 # Testar mapeamento de filiais
 print("\n1. Testando criar_mapa_filiais()...")
-mapa_filiais, mapa_datas = criar_mapa_filiais("Manutencao 0126.xlsx")
+mapa_filiais = criar_mapa_filiais(config.ARQUIVO_ENTRADA_MANUTENCAO)
 
 # Verificar filiais CWB no mapa
 filiais_cwb = [f for f in mapa_filiais.values() if 'CWB' in str(f)]
@@ -29,7 +35,7 @@ else:
 
 # Testar com dados de combustível
 print("\n2. Testando normalização em dados de combustível...")
-df_comb = pd.read_excel("Combustivel 0126.xlsx")
+df_comb = pd.read_excel(config.ARQUIVO_ENTRADA_COMBUSTIVEL)
 
 # Normalizar garagem
 df_comb["Garagem_Normalizada"] = df_comb["Garagem"].apply(normalizar_filial)

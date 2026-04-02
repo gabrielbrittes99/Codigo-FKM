@@ -5,18 +5,22 @@ Analisa as datas de combustível e manutenção para uma placa específica
 
 import pandas as pd
 import sys
+from src import config
 
 def analisar_datas_placa(placa_busca):
     placa_normalizada = placa_busca.upper().replace("-", "").strip()
-    
+
     print("=" * 80)
     print(f"ANÁLISE DE DATAS - PLACA: {placa_busca}")
     print("=" * 80)
-    
+    print(f"\n📋 Período: {config.MES}/{config.ANO}")
+    print(f"   Combustível: {config.ARQUIVO_ENTRADA_COMBUSTIVEL}")
+    print(f"   Manutenção: {config.ARQUIVO_ENTRADA_MANUTENCAO}")
+
     # COMBUSTÍVEL
     print("\n📊 COMBUSTÍVEL:")
     try:
-        df_comb = pd.read_excel("Combustivel 0126.xlsx")
+        df_comb = pd.read_excel(config.ARQUIVO_ENTRADA_COMBUSTIVEL)
         df_comb['Placa_Clean'] = df_comb['Placa'].astype(str).str.replace('-', '').str.strip().str.upper()
         df_placa_comb = df_comb[df_comb['Placa_Clean'] == placa_normalizada]
         
@@ -41,7 +45,7 @@ def analisar_datas_placa(placa_busca):
     # MANUTENÇÃO
     print("\n🔧 MANUTENÇÃO:")
     try:
-        df_manut = pd.read_excel("Manutencao 0126.xlsx")
+        df_manut = pd.read_excel(config.ARQUIVO_ENTRADA_MANUTENCAO)
         df_manut['Placa_Clean'] = df_manut['Placa'].astype(str).str.replace('-', '').str.strip().str.upper()
         df_placa_manut = df_manut[df_manut['Placa_Clean'] == placa_normalizada].copy()
         
