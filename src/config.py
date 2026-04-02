@@ -54,13 +54,14 @@ def encontrar_arquivo_entrada(padrao, diretorio_base=None):
 
     Args:
         padrao: Padrão do arquivo (ex: "Combustivel*.xlsx", "Manutencao*.xlsx")
-        diretorio_base: Diretório onde procurar (padrão: diretório atual do script)
+        diretorio_base: Diretório onde procurar (padrão: root do projeto)
 
     Returns:
         Nome do arquivo encontrado ou None
     """
     if diretorio_base is None:
-        diretorio_base = os.path.dirname(os.path.abspath(__file__))
+        # Diretório root do projeto (um nível acima de src/)
+        diretorio_base = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
     # Buscar arquivos que correspondem ao padrão
     caminho_busca = os.path.join(diretorio_base, padrao)
