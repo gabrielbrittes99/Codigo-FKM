@@ -13,7 +13,8 @@ EXCECOES_FORCADAS = {
     "SFD5C32": "GRITSCH - SNO",
     "SEF8G22": "GRITSCH - CWB (BASE)",
     "SFA0J37": "GRITSCH - CWB (BASE)",
-    "SFD3E82": "GRITSCH - MATRIZ",
+    "SEP6E14": "GRITSCH - MGA",
+    "SFD3E82": "GRITSCH - MGA (após 17/03)",
     "SFG4I55": "GRITSCH - MATRIZ",
     "SFI8F40": "GRITSCH - MATRIZ",
     "SFI8F53": "GRITSCH - CTB",       # Era MATRIZ, transferiu para CTB
@@ -40,7 +41,7 @@ EXCECOES_FORCADAS = {
 - Alguma mudou de filial recentemente?
 - SFI8F53: O comentário diz "transferiu de MATRIZ para CTB" - quando foi isso?
 
-### PLACA_EXCECAO (linha 190)
+### PLACA_EXCECAO (linha 222)
 
 ```python
 PLACA_EXCECAO = "TBU9D20"
@@ -49,6 +50,19 @@ PLACA_EXCECAO = "TBU9D20"
 Esta placa tem tratamento especial para aceitar filial "REFERÊNCIA CURITIBA" (normalmente filiais REFERÊNCIA são ignoradas).
 
 **❓ VALIDAR**: Esta placa ainda precisa deste tratamento especial?
+
+---
+
+## 🆔 Exceções por ID de Transação - src/filial_mapping.py
+
+### EXCECOES_TRANSACOES (linhas 34-64)
+
+Dicionário que vincula IDs de transação específicos a filiais, independentemente da placa ou da data. Tem a **maior prioridade** no mapeamento.
+
+**Atuais (Abril 2026):**
+- 25 transações para **GRITSCH - CGB** (Cuiabá)
+
+**Lógica**: Se o ID da transação estiver nesta lista, a filial será forçada para a configurada.
 
 ---
 
