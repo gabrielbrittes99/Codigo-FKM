@@ -1,233 +1,96 @@
-# Sistema de Geração de FKMs - GRITSCH
+# Sistema de Fechamento de FKM e KPIs - GRITSCH
 
-Sistema automatizado para processamento de fechamento mensal de combustível e manutenção.
+Sistema totalmente automatizado para extração, processamento e fechamento mensal das informações de Frota, Manutenção e Combustível.
 
-## 🚀 Como Usar (Simples e Rápido)
+## 🚀 Como Usar (Workflow Automatizado 2026)
 
-### Passo 1: Preparar os Arquivos
+### Passo 1: Inserir a Planilha de Combustível
 
-Coloque os arquivos Excel do mês na pasta do projeto:
+Para realizar o fechamento, o sistema precisa de apenas **um arquivo manual**:
 
-- `Combustivel MMAA.xlsx` (exemplo: `Combustivel 0126.xlsx`)
-- `Manutencao MMAA.xlsx` (exemplo: `Manutencao 0126.xlsx`)
+- Coloque o arquivo de combustível do mês na pasta `dados/entrada/` do projeto.
+- Exemplo: `dados/entrada/Combustivel 0426.xlsx`
 
-### Passo 2: Executar o Menu Interativo
+_(Obs: Os arquivos de Manutenção e Frota não precisam ser extraídos manualmente. O sistema fará o download direto do banco de dados Bluefleet e os salvará automaticamente nesta mesma pasta)._
+
+### Passo 2: Ajustes Manuais por Placa (Opcional)
+
+Se ao longo dos meses você precisar forçar alguma placa para uma filial específica (ex: uma filial que ainda não existe no sistema), você pode criar um arquivo chamado `ajustes_placas.csv` na pasta raiz do projeto.
+
+**Formato do `ajustes_placas.csv`:**
+
+```csv
+Placa,Filial
+ABC1234,GRITSCH - NOVA FILIAL
+XYZ9876,GRITSCH - OUTRA
+```
+
+O sistema lerá esse arquivo e aplicará essa regra forçada para Manutenção, Combustível e Frota.
+
+### Passo 3: Executar o Fechamento Completo
+
+Abra o terminal na pasta do projeto e rode o orquestrador:
 
 ```bash
-python run.py
+python fechar_mes.py
 ```
 
-Ou:
+Pronto! O script executará as etapas automaticamente:
 
-```bash
-python -m src.menu_interativo
-```
+1. Conecta no Bluefleet e baixa `Manutencao MMAA.xlsx` e `Frota MMAA.xlsx`.
+2. Processa os dados e separa o Combustível por filial.
+3. Processa e separa a Manutenção por filial.
+4. Gera o inventário de Frota por filial.
+5. Cruza as informações e gera a **Planilha Consolidada de KPIs**.
 
-### Passo 3: Escolher a Opção
+---
 
-- **Opção 1**: Processar apenas Combustível
-- **Opção 2**: Processar apenas Manutenção
-- **Opção 3**: Processar TUDO (recomendado)
+## 📁 Pastas de Saída
 
-Pronto! O sistema vai:
+Todos os relatórios gerados serão organizados e salvos dentro da pasta `Dados Tratados/[Mês Ano]`.
 
-- ✅ Detectar automaticamente o mês de fechamento (mês anterior ao atual)
-- ✅ Encontrar os arquivos Excel automaticamente
-- ✅ Gerar todos os relatórios nas pastas corretas
+Exemplo:
 
-## 📅 Lógica de Fechamento
-
-**IMPORTANTE:** O sistema processa o **mês anterior** (fechamento).
-
-**Exemplos:**
-
-- Rodando em **Fevereiro/2026** → Processa **Janeiro/2026**
-- Rodando em **Março/2026** → Processa **Fevereiro/2026**
-- Rodando em **Janeiro/2026** → Processa **Dezembro/2025**
-
-## 📁 Estrutura de Arquivos
-
-```
+```text
 codigo-FKM/
-├── src/                         # Código principal
-│   ├── config.py                # Configuração automática
-│   ├── menu_interativo.py       # Menu principal
-│   ├── executar_resumos.py      # Processamento de combustível
-│   ├── executar_manutencao.py   # Processamento de manutenção
-│   ├── filial_mapping.py        # Mapeamento de filiais
-│   ├── frota_mapping.py         # Mapeamento de frota
-│   └── gerar_relatorio_kpis.py  # Geração de relatórios de KPIs
-│
-├── tests/                       # Testes automatizados
-│   ├── test_quick.py
-│   ├── test_normalizacao.py
-│   ├── test_cwb_consolidacao.py
-│   └── test_tbg7a13.py
-│
-├── tools/                       # Ferramentas de diagnóstico
-│   ├── diagnostico_conferencia.py
-│   ├── diagnostico_placa.py
-│   └── analisar_datas_placa.py
-│
-├── modelos FKM/                 # Templates Excel
-├── Dados Tratados/              # Saída de dados
-│
-├── run.py                       # Script de execução facilitado
-├── README.md                    # Este arquivo
-└── requirements.txt             # Dependências
-
-(Arquivos Excel de entrada ficam no root)
+├── Dados Tratados/
+│   └── Abril 2026/
+│       ├── GRITSCH - PET/
+│       │   ├── Combustivel - GRITSCH PET.xlsx
+│       │   ├── Frota - GRITSCH PET.xlsx
+│       │   └── Manutencao - GRITSCH PET.xlsx
+│       ├── GRITSCH - CWB (BASE)/
+│       │   └── ...
+│       ├── 0426 COMBUSTIVEL GRITSCH TRANSPORTES GERAL.xlsx
+│       ├── 0426 FROTA GRITSCH TRANSPORTES GERAL.xlsx
+│       ├── 0426 MANUTENÇÃO GRITSCH TRANSPORTES GERAL.xlsx
+│       └── Relatorio KPIs Abril 2026 - Combustivel e Manutencao.xlsx
 ```
 
-## 🎯 Pastas de Saída
+---
 
-Os arquivos gerados são salvos em:
+## ⚙️ Funcionalidades Internas
 
-```
-\\wsl.localhost\Ubuntu\home\gabriel\projetos\Dados Tratados\
-└── Janeiro\
-    ├── COMBUSTIVEL Janeiro 2026\
-    │   ├── Combustivel - GRITSCH CSC.xlsx
-    │   ├── Combustivel - GRITSCH POA.xlsx
-    │   └── ... (um arquivo por filial)
-    └── MANUTENÇÃO Janeiro 2026\
-        ├── Manutencao - GRITSCH CSC.xlsx
-        ├── Manutencao - GRITSCH POA.xlsx
-        └── ... (um arquivo por filial)
-```
+- **Lógica Temporal de Manutenção:** O sistema analisa a data de cada abastecimento e localiza qual era a filial de manutenção do veículo **naquele dia exato**.
+- **Filiais Unificadas:** Regras inteligentes que consolidam `CWB (ECT)` → `CWB (BASE)` e `RATEIO GRI` → `GRITSCH - MATRIZ`.
+- **Query Otimizada:** A conexão direta com o SQL Server utiliza tabelas temporárias e filtros no banco para garantir que grandes volumes de dados (18.000+ manutenções/mês) sejam baixados rapidamente.
 
-## ⚙️ Configuração Manual (Opcional)
+## 🛠️ Requisitos e Configurações de Ambiente
 
-Se precisar forçar um mês/ano específico, edite o arquivo `src/config.py`:
+1. **Python 3.x**
+2. O arquivo `.env` deve existir na raiz com as credenciais do banco `Bluefleet`:
 
-```python
-# Descomente estas linhas para forçar um período específico:
-MES = "Janeiro"
-ANO = "2026"
+```env
+DB_HOST=seu_host
+DB_NAME=seu_banco
+DB_USER=seu_usuario
+DB_PASSWORD=sua_senha
 ```
 
-## 🔧 Executar Scripts Individualmente
-
-Se preferir rodar sem o menu:
-
-```bash
-# Apenas combustível
-python -m src.executar_resumos
-
-# Apenas manutenção
-python -m src.executar_manutencao
-
-# Gerar relatório de KPIs
-python -m src.gerar_relatorio_kpis
-
-# Verificar configuração
-python -m tests.test_quick
-```
-
-## 📊 O Que o Sistema Faz
-
-### Combustível (`src/executar_resumos.py`)
-
-- Separa combustível comum de Arla 32
-- Agrupa por filial e placa
-- Calcula hodômetros (inicial e final)
-- Gera resumo por posto
-- Aplica priorização de filial de manutenção
-
-### Manutenção (`src/executar_manutencao.py`)
-
-- Separa por natureza de manutenção
-- Agrupa por filial e placa
-- Calcula totais por natureza
-- Layout lado a lado com cores da empresa
-
-### Relatório de KPIs (`src/gerar_relatorio_kpis.py`)
-
-- Enriquece dados com informações da frota
-- Calcula indicadores de desempenho
-- Gera relatórios consolidados
-
-## 🛠️ Dependências
+3. **Instalação das dependências**:
 
 ```bash
 pip install -r requirements.txt
 ```
 
-Ou manualmente:
-
-```bash
-pip install pandas openpyxl numpy
-```
-
-## 📝 Notas Importantes
-
-1. **Nomes de Arquivos**: O sistema busca automaticamente arquivos que começam com "Combustivel" ou "Manutencao"
-2. **Múltiplos Arquivos**: Se houver vários arquivos, usa o mais recente (por data de modificação)
-3. **Filiais Especiais**: SAO FREGUESIA é automaticamente convertido para SAO PERUS
-4. **Exceções de Placas**: Placas específicas têm filiais fixas (definidas em `src/filial_mapping.py`)
-
-## ❓ Solução de Problemas
-
-### Erro: "Arquivo não encontrado"
-
-- Verifique se os arquivos Excel estão na pasta do projeto
-- Verifique se os nomes começam com "Combustivel" ou "Manutencao"
-
-### Erro: "Coluna não encontrada"
-
-- Verifique se o arquivo Excel tem a estrutura esperada
-- Verifique se as abas estão nomeadas corretamente
-
-### Erro: "ModuleNotFoundError: No module named 'src'"
-
-- Execute os scripts a partir do diretório raiz do projeto
-- Use `python -m src.menu_interativo` ao invés de `python src/menu_interativo.py`
-
-### Mês/Ano errado
-
-- Edite `src/config.py` e descomente/modifique as variáveis MES e ANO
-
-## 🧪 Testes
-
-Execute os testes para validar o funcionamento:
-
-```bash
-# Teste rápido de configuração
-python -m tests.test_quick
-
-# Teste de normalização de filiais
-python -m tests.test_normalizacao
-
-# Teste de consolidação CWB
-python -m tests.test_cwb_consolidacao
-
-# Teste de placa específica
-python -m tests.test_tbg7a13
-```
-
-## 🔍 Ferramentas de Diagnóstico
-
-```bash
-# Diagnóstico completo de conferência
-python -m tools.diagnostico_conferencia
-
-# Diagnóstico de placas
-python -m tools.diagnostico_placa
-
-# Análise de datas por placa
-python -m tools.analisar_datas_placa
-```
-
-## 📧 Suporte
-
-Para dúvidas ou problemas, verifique:
-
-1. Os arquivos estão na pasta correta?
-2. O mês/ano detectado está correto? (veja no menu)
-3. As dependências estão instaladas? (`pip install -r requirements.txt`)
-4. Está executando os scripts a partir do diretório raiz?
-
----
-
-**Versão:** 3.0 - Organizada e Modular
-**Última atualização:** Abril 2026
+Para forçar um mês diferente do padrão (que é sempre o mês anterior ao atual), edite o arquivo `src/config.py` descomentando as variáveis `MES` e `ANO`.

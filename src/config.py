@@ -10,6 +10,11 @@ import glob
 import os
 from datetime import datetime, timedelta
 
+# ==================== CAMINHOS BASE ====================
+
+# Diretório root do projeto (um nível acima de src/)
+PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
 # ==================== CONFIGURAÇÕES AUTOMÁTICAS ====================
 
 
@@ -48,23 +53,18 @@ def obter_mes_ano_fechamento():
     return mes, ano
 
 
-def encontrar_arquivo_entrada(padrao, diretorio_base=None):
+def encontrar_arquivo_entrada(padrao):
     """
-    Busca automaticamente o arquivo de entrada mais recente que corresponde ao padrão
+    Busca automaticamente o arquivo de entrada mais recente que corresponde ao padrão.
+    Sempre busca no diretório 'dados/entrada' e retorna caminho absoluto.
 
     Args:
         padrao: Padrão do arquivo (ex: "Combustivel*.xlsx", "Manutencao*.xlsx")
-        diretorio_base: Diretório onde procurar (padrão: root do projeto)
 
     Returns:
-        Nome do arquivo encontrado ou None
+        Caminho absoluto do arquivo encontrado ou None
     """
-    if diretorio_base is None:
-        # Diretório root do projeto (um nível acima de src/)
-        diretorio_base = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-
-    # Buscar arquivos que correspondem ao padrão
-    caminho_busca = os.path.join(diretorio_base, padrao)
+    caminho_busca = os.path.join(PROJECT_ROOT, "dados", "entrada", padrao)
     arquivos_encontrados = glob.glob(caminho_busca)
 
     if not arquivos_encontrados:
@@ -74,8 +74,7 @@ def encontrar_arquivo_entrada(padrao, diretorio_base=None):
     if len(arquivos_encontrados) > 1:
         arquivos_encontrados.sort(key=os.path.getmtime, reverse=True)
 
-    # Retornar apenas o nome do arquivo (sem caminho)
-    return os.path.basename(arquivos_encontrados[0])
+    return arquivos_encontrados[0]
 
 
 # ==================== VARIÁVEIS PRINCIPAIS ====================
@@ -88,19 +87,18 @@ MES, ANO = obter_mes_ano_fechamento()
 # ANO = "2026"
 
 # Diretório base de saída
-DIRETORIO_BASE_SAIDA = "/home/gabriel/projetos/Arquivos FKMs"
+DIRETORIO_BASE_SAIDA = os.path.join(PROJECT_ROOT, "Dados Tratados")
 
-# Detectar automaticamente os arquivos de entrada
+# Detectar automaticamente os arquivos de entrada (caminhos absolutos)
 ARQUIVO_ENTRADA_COMBUSTIVEL = encontrar_arquivo_entrada("Combustivel*.xlsx")
 ARQUIVO_ENTRADA_MANUTENCAO = encontrar_arquivo_entrada("Manutencao*.xlsx")
 ARQUIVO_ENTRADA_FROTA = encontrar_arquivo_entrada("Frota*.xlsx")
 
-# Nomes das pastas de saída
-PASTA_SAIDA_COMBUSTIVEL = f"COMBUSTIVEL {MES} {ANO}"
-PASTA_SAIDA_MANUTENCAO = f"MANUTENÇÃO {MES} {ANO}"
+# Nome da pasta do período
+PASTA_PERIODO = f"{MES} {ANO}"
 
 
-# ==================== FUNÇÕES AUXILIARES (NÃO EDITAR) ====================
+# ==================== FUNÇÕES AUXILIARES ====================
 
 
 def obter_numero_mes():
@@ -122,14 +120,25 @@ def obter_numero_mes():
     return meses.get(MES, "00")
 
 
+def obter_caminho_saida_filial(nome_filial):
+    """
+    Retorna o caminho da pasta de saída para uma filial específica.
+    Estrutura: Dados Tratados/Março 2026/GRITSCH - CSC/
+    """
+    nome_limpo = "".join(
+        c for c in str(nome_filial) if c.isalnum() or c in (" ", "_", "-")
+    ).strip()
+    return os.path.join(DIRETORIO_BASE_SAIDA, PASTA_PERIODO, nome_limpo)
+
+
 def obter_caminho_saida_combustivel():
-    """Retorna o caminho completo da pasta de saída para combustível"""
-    return os.path.join(DIRETORIO_BASE_SAIDA, MES, PASTA_SAIDA_COMBUSTIVEL)
+    """Retorna o caminho completo da pasta de saída para combustível (legado)"""
+    return os.path.join(DIRETORIO_BASE_SAIDA, PASTA_PERIODO)
 
 
 def obter_caminho_saida_manutencao():
-    """Retorna o caminho completo da pasta de saída para manutenção"""
-    return os.path.join(DIRETORIO_BASE_SAIDA, MES, PASTA_SAIDA_MANUTENCAO)
+    """Retorna o caminho completo da pasta de saída para manutenção (legado)"""
+    return os.path.join(DIRETORIO_BASE_SAIDA, PASTA_PERIODO)
 
 
 def validar_configuracao():
@@ -168,7 +177,7 @@ def validar_configuracao():
     if ARQUIVO_ENTRADA_COMBUSTIVEL:
         if os.path.exists(ARQUIVO_ENTRADA_COMBUSTIVEL):
             print(
-                f"\n✅ Arquivo de combustível encontrado: {ARQUIVO_ENTRADA_COMBUSTIVEL}"
+                f"\n✅ Arquivo de combustível encontrado: {os.path.basename(ARQUIVO_ENTRADA_COMBUSTIVEL)}"
             )
         else:
             print(
@@ -184,7 +193,9 @@ def validar_configuracao():
     # Validar arquivo de manutenção
     if ARQUIVO_ENTRADA_MANUTENCAO:
         if os.path.exists(ARQUIVO_ENTRADA_MANUTENCAO):
-            print(f"✅ Arquivo de manutenção encontrado: {ARQUIVO_ENTRADA_MANUTENCAO}")
+            print(
+                f"✅ Arquivo de manutenção encontrado: {os.path.basename(ARQUIVO_ENTRADA_MANUTENCAO)}"
+            )
         else:
             print(
                 f"⚠️  Arquivo de manutenção não encontrado: {ARQUIVO_ENTRADA_MANUTENCAO}"
@@ -197,16 +208,23 @@ def validar_configuracao():
     # Validar arquivo de frota (opcional mas recomendado)
     if ARQUIVO_ENTRADA_FROTA:
         if os.path.exists(ARQUIVO_ENTRADA_FROTA):
-            print(f"✅ Arquivo de frota encontrado: {ARQUIVO_ENTRADA_FROTA}")
+            print(
+                f"✅ Arquivo de frota encontrado: {os.path.basename(ARQUIVO_ENTRADA_FROTA)}"
+            )
         else:
             print(f"⚠️  Arquivo de frota não encontrado: {ARQUIVO_ENTRADA_FROTA}")
     else:
-        print(f"⚠️  Nenhum arquivo de frota encontrado (padrão: Frota*.xlsx) - KPIs por grupo indisponíveis")
+        print(
+            f"⚠️  Nenhum arquivo de frota encontrado (padrão: Frota*.xlsx) - KPIs por grupo indisponíveis"
+        )
 
     # Validar diretório de saída
-    print(f"\n📁 Diretórios de saída:")
-    print(f"   - Combustível: {obter_caminho_saida_combustivel()}")
-    print(f"   - Manutenção: {obter_caminho_saida_manutencao()}")
+    print(
+        f"\n📁 Diretório de saída: {os.path.join(DIRETORIO_BASE_SAIDA, PASTA_PERIODO)}"
+    )
+    print(
+        f"   Estrutura: {PASTA_PERIODO}/<FILIAL>/Combustivel-*.xlsx + Manutencao-*.xlsx"
+    )
 
     if valido:
         print(

@@ -382,10 +382,9 @@ arquivo_excel = config.ARQUIVO_ENTRADA_COMBUSTIVEL
 nome_coluna_filial = "Garagem"
 prefixo_saida = "Combustivel - "
 nome_da_aba = "Sheet1"
-pasta_de_destino = config.obter_caminho_saida_combustivel()
 
-print(f"\n📁 Arquivo de entrada: {arquivo_excel}")
-print(f"📁 Pasta de destino: {pasta_de_destino}")
+print(f"\n📁 Arquivo de entrada: {os.path.basename(arquivo_excel)}")
+print(f"📁 Pasta de destino: {os.path.join(config.DIRETORIO_BASE_SAIDA, config.PASTA_PERIODO)}")
 
 # ==================== PROCESSAMENTO ====================
 
@@ -394,9 +393,7 @@ if not os.path.exists(arquivo_excel):
     print("Verifique se o nome do arquivo está correto no config.py")
 else:
     try:
-        os.makedirs(pasta_de_destino, exist_ok=True)
-
-        print(f"\n🔄 Lendo o arquivo '{arquivo_excel}'...")
+        print(f"\n🔄 Lendo o arquivo '{os.path.basename(arquivo_excel)}'...")
         df = pd.read_excel(arquivo_excel, sheet_name=nome_da_aba)
         print("✅ Leitura concluída com sucesso.")
 
@@ -409,14 +406,14 @@ else:
 
         # Criar mapa de filiais a partir da planilha de manutenção
         arquivo_manutencao = config.ARQUIVO_ENTRADA_MANUTENCAO
-        if os.path.exists(arquivo_manutencao):
+        if arquivo_manutencao and os.path.exists(arquivo_manutencao):
             historico_filiais = criar_mapa_filiais(arquivo_manutencao)
 
             # Aplicar filial de manutenção com lógica temporal
             df = aplicar_filial_manutencao(
-                df, 
-                historico_filiais, 
-                coluna_placa="Placa", 
+                df,
+                historico_filiais,
+                coluna_placa="Placa",
                 coluna_garagem="Garagem",
                 coluna_data="Data da transacao"
             )
@@ -424,16 +421,12 @@ else:
             # Usar Filial_Final para agrupamento
             nome_coluna_filial = "Filial_Final"
         else:
-            print(f"⚠️ Arquivo de manutenção '{arquivo_manutencao}' não encontrado.")
+            print(f"⚠️ Arquivo de manutenção não encontrado.")
             print("   Usando coluna 'Garagem' original.")
             nome_coluna_filial = "Garagem"
 
         # Substituir SAO FREGUESIA por SAO PERUS
         df = substituir_freguesia_por_perus(df, nome_coluna_filial)
-
-        # Corrigir postos específicos de CSC para filiais corretas
-        # DESABILITADO: mapeamento de postos por enquanto não utilizado
-        # df = corrigir_filial_por_posto(df, nome_coluna_filial, "Estabelecimento")
 
         if nome_coluna_filial not in df.columns:
             print(f"\n❌ ERRO: A coluna '{nome_coluna_filial}' não foi encontrada.")
@@ -445,22 +438,27 @@ else:
             else:
                 print(f"\n✅ {len(filiais_unicas)} filiais únicas encontradas")
                 print("\n" + "=" * 80)
-                print("GERANDO ARQUIVOS COM RESUMOS")
+                print("GERANDO ARQUIVOS POR FILIAL")
                 print("=" * 80)
 
                 for idx, filial in enumerate(filiais_unicas, 1):
                     df_filial = df[df[nome_coluna_filial] == filial].copy()
+
+                    # Criar pasta da filial
+                    pasta_filial = config.obter_caminho_saida_filial(filial)
+                    os.makedirs(pasta_filial, exist_ok=True)
 
                     nome_filial_limpo = "".join(
                         c for c in str(filial) if c.isalnum() or c in (" ", "_")
                     ).rstrip()
                     nome_arquivo_saida = f"{prefixo_saida}{nome_filial_limpo}.xlsx"
                     caminho_completo_saida = os.path.join(
-                        pasta_de_destino, nome_arquivo_saida
+                        pasta_filial, nome_arquivo_saida
                     )
 
                     print(f"\n[{idx}/{len(filiais_unicas)}] 📊 {filial}")
                     print(f"      Registros: {len(df_filial)}")
+                    print(f"      Pasta: {filial}/")
                     print(f"      Gerando: {nome_arquivo_saida}")
 
                     if os.path.exists(caminho_completo_saida):
@@ -484,8 +482,10 @@ else:
                 nome_arquivo_geral = (
                     f"{mes_num}{ano_short} COMBUSTIVEL GRITSCH TRANSPORTES GERAL.xlsx"
                 )
+                pasta_periodo = os.path.join(config.DIRETORIO_BASE_SAIDA, config.PASTA_PERIODO)
+                os.makedirs(pasta_periodo, exist_ok=True)
                 caminho_completo_geral = os.path.join(
-                    pasta_de_destino, nome_arquivo_geral
+                    pasta_periodo, nome_arquivo_geral
                 )
 
                 print(f"\n🔄 Salvando arquivo geral...")
@@ -495,12 +495,15 @@ else:
                 print("\n" + "=" * 80)
                 print("🎉 PROCESSO CONCLUÍDO COM SUCESSO!")
                 print("=" * 80)
-                print(f"\n📁 Arquivos salvos em: {pasta_de_destino}")
-                print(f"\n✨ Cada arquivo contém:")
-                print(f"   📋 Aba 1: Dados Brutos")
-                print(f"   📋 Aba 2: Combustível (Vários itens) - SEM Arla")
-                print(f"   📋 Aba 3: Arla 32 - Apenas Arla")
-                print(f"   📋 Aba 4: Resumo por Posto")
+                print(f"\n📁 Arquivos salvos em: {pasta_periodo}")
+                print(f"\n✨ Estrutura:")
+                print(f"   📂 {config.PASTA_PERIODO}/")
+                for filial in sorted(filiais_unicas):
+                    nome_limpo = "".join(
+                        c for c in str(filial) if c.isalnum() or c in (" ", "_", "-")
+                    ).strip()
+                    print(f"      📂 {nome_limpo}/")
+                    print(f"         📋 Combustivel - *.xlsx")
 
     except Exception as e:
         print(f"\n❌ Erro: {e}")

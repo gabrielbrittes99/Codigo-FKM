@@ -82,7 +82,7 @@ def aplicar_excecoes_placa(df, coluna_filial="FILIAL", coluna_placa="Placa"):
             .str.upper()
         )
 
-    from filial_mapping import EXCECOES_FORCADAS
+    from src.filial_mapping import EXCECOES_FORCADAS
     
     # Aplica APENAS para placas que estão na lista de exceções forçadas
     for placa, filial_correta in EXCECOES_FORCADAS.items():
@@ -291,10 +291,9 @@ print("=" * 80)
 arquivo_excel = config.ARQUIVO_ENTRADA_MANUTENCAO
 nome_coluna_filial = "FILIAL"
 prefixo_saida = "Manutencao - "
-pasta_de_destino = config.obter_caminho_saida_manutencao()
 
-print(f"\n📁 Arquivo de entrada: {arquivo_excel}")
-print(f"📁 Pasta de destino: {pasta_de_destino}")
+print(f"\n📁 Arquivo de entrada: {os.path.basename(arquivo_excel)}")
+print(f"📁 Pasta de destino: {os.path.join(config.DIRETORIO_BASE_SAIDA, config.PASTA_PERIODO)}")
 
 # ==================== PROCESSAMENTO ====================
 
@@ -303,9 +302,7 @@ if not os.path.exists(arquivo_excel):
     print("Verifique se o nome do arquivo está correto no config.py")
 else:
     try:
-        os.makedirs(pasta_de_destino, exist_ok=True)
-
-        print(f"\n🔄 Lendo o arquivo '{arquivo_excel}'...")
+        print(f"\n🔄 Lendo o arquivo '{os.path.basename(arquivo_excel)}'...")
         df = pd.read_excel(arquivo_excel)
         print("✅ Leitura concluída com sucesso.")
 
@@ -332,22 +329,27 @@ else:
             else:
                 print(f"\n✅ {len(filiais_unicas)} filiais únicas encontradas")
                 print("\n" + "=" * 80)
-                print("GERANDO ARQUIVOS COM RESUMOS")
+                print("GERANDO ARQUIVOS POR FILIAL")
                 print("=" * 80)
 
                 for idx, filial in enumerate(filiais_unicas, 1):
                     df_filial = df[df[nome_coluna_filial] == filial].copy()
+
+                    # Criar pasta da filial
+                    pasta_filial = config.obter_caminho_saida_filial(filial)
+                    os.makedirs(pasta_filial, exist_ok=True)
 
                     nome_filial_limpo = "".join(
                         c for c in str(filial) if c.isalnum() or c in (" ", "_")
                     ).rstrip()
                     nome_arquivo_saida = f"{prefixo_saida}{nome_filial_limpo}.xlsx"
                     caminho_completo_saida = os.path.join(
-                        pasta_de_destino, nome_arquivo_saida
+                        pasta_filial, nome_arquivo_saida
                     )
 
                     print(f"\n[{idx}/{len(filiais_unicas)}] 📊 {filial}")
                     print(f"      Registros: {len(df_filial)}")
+                    print(f"      Pasta: {filial}/")
                     print(f"      Gerando: {nome_arquivo_saida}")
 
                     if os.path.exists(caminho_completo_saida):
@@ -371,8 +373,10 @@ else:
                 nome_arquivo_geral = (
                     f"{mes_num}{ano_short} MANUTENÇÃO GRITSCH TRANSPORTES GERAL.xlsx"
                 )
+                pasta_periodo = os.path.join(config.DIRETORIO_BASE_SAIDA, config.PASTA_PERIODO)
+                os.makedirs(pasta_periodo, exist_ok=True)
                 caminho_completo_geral = os.path.join(
-                    pasta_de_destino, nome_arquivo_geral
+                    pasta_periodo, nome_arquivo_geral
                 )
 
                 print(f"\n🔄 Salvando arquivo geral...")
@@ -382,10 +386,15 @@ else:
                 print("\n" + "=" * 80)
                 print("🎉 PROCESSO CONCLUÍDO COM SUCESSO!")
                 print("=" * 80)
-                print(f"\n📁 Arquivos salvos em: {pasta_de_destino}")
-                print(
-                    f"\n✨ Estrutura: Natureza | Valor | (2 colunas vazias) | Natureza | Valor..."
-                )
+                print(f"\n📁 Arquivos salvos em: {pasta_periodo}")
+                print(f"\n✨ Estrutura:")
+                print(f"   📂 {config.PASTA_PERIODO}/")
+                for filial in sorted(filiais_unicas):
+                    nome_limpo = "".join(
+                        c for c in str(filial) if c.isalnum() or c in (" ", "_", "-")
+                    ).strip()
+                    print(f"      📂 {nome_limpo}/")
+                    print(f"         📋 Manutencao - *.xlsx")
 
     except Exception as e:
         print(f"\n❌ Erro: {e}")
