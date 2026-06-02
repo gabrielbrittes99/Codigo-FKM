@@ -2,46 +2,87 @@
 
 Sistema totalmente automatizado para extração, processamento e fechamento mensal das informações de Frota, Manutenção e Combustível.
 
-## 🚀 Como Usar (Workflow Automatizado 2026)
+---
 
-### Passo 1: Inserir a Planilha de Combustível
+## 🛠️ Configuração e Ativação do Ambiente Virtual (.venv)
 
-Para realizar o fechamento, o sistema precisa de apenas **um arquivo manual**:
+O projeto utiliza um ambiente virtual Python para isolar as dependências. Para ativar e utilizar o projeto, siga os passos abaixo no terminal:
 
-- Coloque o arquivo de combustível do mês na pasta `dados/entrada/` do projeto.
-- Exemplo: `dados/entrada/Combustivel 0426.xlsx`
+### No Linux / macOS (Seu Sistema):
+1. **Ative o ambiente virtual:**
+   ```bash
+   source .venv/bin/activate
+   ```
+   *Você saberá que está ativado quando ver o prefixo `(.venv)` no início da linha do terminal.*
 
-_(Obs: Os arquivos de Manutenção e Frota não precisam ser extraídos manualmente. O sistema fará o download direto do banco de dados Bluefleet e os salvará automaticamente nesta mesma pasta)._
+2. **Se o ambiente virtual (.venv) não existir ou precisar ser recriado:**
+   ```bash
+   python3 -m venv .venv
+   source .venv/bin/activate
+   pip install --upgrade pip
+   pip install -r requirements.txt
+   ```
 
-### Passo 2: Ajustes Manuais por Placa (Opcional)
+### No Windows:
+1. **Ative o ambiente virtual:**
+   ```cmd
+   .venv\Scripts\activate
+   ```
 
-Se ao longo dos meses você precisar forçar alguma placa para uma filial específica (ex: uma filial que ainda não existe no sistema), você pode criar um arquivo chamado `ajustes_placas.csv` na pasta raiz do projeto.
+---
 
-**Formato do `ajustes_placas.csv`:**
+## 🚀 Como Executar o Fechamento
 
-```csv
-Placa,Filial
-ABC1234,GRITSCH - NOVA FILIAL
-XYZ9876,GRITSCH - OUTRA
-```
-
-O sistema lerá esse arquivo e aplicará essa regra forçada para Manutenção, Combustível e Frota.
-
-### Passo 3: Executar o Fechamento Completo
-
-Abra o terminal na pasta do projeto e rode o orquestrador:
-
+### Passo 1: Executar o Processo Completo
+Com o `.venv` ativado, execute o script orquestrador na raiz do projeto para rodar todas as 5 etapas sequencialmente (extração, separação de combustíveis, manutenção, frota e KPIs):
 ```bash
 python fechar_mes.py
 ```
 
-Pronto! O script executará as etapas automaticamente:
+### Passo 2: Ajustar Placas nas Filiais (Opcional)
+Se precisar ajustar ou forçar alguma placa para uma filial específica (ex: veículos novos sem placa definitiva ou filiais sem inscrição estadual):
 
-1. Conecta no Bluefleet e baixa `Manutencao MMAA.xlsx` e `Frota MMAA.xlsx`.
-2. Processa os dados e separa o Combustível por filial.
-3. Processa e separa a Manutenção por filial.
-4. Gera o inventário de Frota por filial.
-5. Cruza as informações e gera a **Planilha Consolidada de KPIs**.
+* **Método Recomendado (Sem alterar código):**
+  Edite ou crie o arquivo **`ajustes_placas.csv`** na raiz do projeto:
+  ```csv
+  Placa,Filial
+  ABC1234,GRITSCH - PET
+  XYZ9876,GRITSCH - CWB (BASE)
+  ```
+* **Método Direto no Código:**
+  Edite o dicionário `EXCECOES_FORCADAS` no arquivo [src/filial_mapping.py](file:///home/gabriel/Projetos/codigo-FKM/src/filial_mapping.py).
+
+### Passo 3: Re-executar Lotes Específicos
+Se você fez algum ajuste em `ajustes_placas.csv` ou no código, **não precisa rodar a extração do banco novamente**. Você pode rodar apenas as etapas de reprocessamento e geração dos arquivos:
+
+* **Gerar relatórios de Combustível:**
+  ```bash
+  python -m src.executar_resumos
+  ```
+* **Gerar relatórios de Manutenção:**
+  ```bash
+  python -m src.executar_manutencao
+  ```
+* **Gerar relatórios de Frota:**
+  ```bash
+  python -m src.executar_frota
+  ```
+* **Gerar Relatório Geral de KPIs:**
+  ```bash
+  python -m src.gerar_relatorio_kpis
+  ```
+
+### Passo 4: Validar e Auditar Dados
+Para verificar se há alguma anomalia crítica (hodômetros invertidos, litragens absurdas ou transações duplicadas) antes do envio:
+```bash
+python -m tools.validar_fechamento
+```
+
+### Passo 5: Disparo de E-mails para as Filiais
+Quando tudo estiver conferido e correto, dispare os relatórios anexados automaticamente para as caixas de e-mail de cada filial:
+```bash
+python -m src.enviar_emails
+```
 
 ---
 
@@ -49,48 +90,45 @@ Pronto! O script executará as etapas automaticamente:
 
 Todos os relatórios gerados serão organizados e salvos dentro da pasta `Dados Tratados/[Mês Ano]`.
 
-Exemplo:
-
 ```text
 codigo-FKM/
 ├── Dados Tratados/
-│   └── Abril 2026/
+│   └── Maio 2026/
 │       ├── GRITSCH - PET/
-│       │   ├── Combustivel - GRITSCH PET.xlsx
-│       │   ├── Frota - GRITSCH PET.xlsx
-│       │   └── Manutencao - GRITSCH PET.xlsx
+│       │   ├── Combustivel - GRITSCH  PET.xlsx
+│       │   ├── Frota - GRITSCH  PET.xlsx
+│       │   └── Manutencao - GRITSCH  PET.xlsx
 │       ├── GRITSCH - CWB (BASE)/
 │       │   └── ...
-│       ├── 0426 COMBUSTIVEL GRITSCH TRANSPORTES GERAL.xlsx
-│       ├── 0426 FROTA GRITSCH TRANSPORTES GERAL.xlsx
-│       ├── 0426 MANUTENÇÃO GRITSCH TRANSPORTES GERAL.xlsx
-│       └── Relatorio KPIs Abril 2026 - Combustivel e Manutencao.xlsx
+│       ├── 0526 COMBUSTIVEL GRITSCH TRANSPORTES GERAL.xlsx
+│       ├── 0526 FROTA GRITSCH TRANSPORTES GERAL.xlsx
+│       ├── 0526 MANUTENÇÃO GRITSCH TRANSPORTES GERAL.xlsx
+│       └── Relatorio KPIs Maio 2026 - Combustivel e Manutencao.xlsx
 ```
 
 ---
 
-## ⚙️ Funcionalidades Internas
+## ⚙️ Configurações Importantes (.env)
 
-- **Lógica Temporal de Manutenção:** O sistema analisa a data de cada abastecimento e localiza qual era a filial de manutenção do veículo **naquele dia exato**.
-- **Filiais Unificadas:** Regras inteligentes que consolidam `CWB (ECT)` → `CWB (BASE)` e `RATEIO GRI` → `GRITSCH - MATRIZ`.
-- **Query Otimizada:** A conexão direta com o SQL Server utiliza tabelas temporárias e filtros no banco para garantir que grandes volumes de dados (18.000+ manutenções/mês) sejam baixados rapidamente.
-
-## 🛠️ Requisitos e Configurações de Ambiente
-
-1. **Python 3.x**
-2. O arquivo `.env` deve existir na raiz com as credenciais do banco `Bluefleet`:
-
+O arquivo `.env` na raiz do projeto deve conter os dados de conexões e credenciais de e-mail:
 ```env
-DB_HOST=seu_host
-DB_NAME=seu_banco
-DB_USER=seu_usuario
+# Banco Bluefleet (SQL Server)
+DB_HOST=bi.bluefleet.com.br
+DB_NAME=referencia
+DB_USER=referencia
 DB_PASSWORD=sua_senha
+
+# PostgreSQL (DW Combustível)
+DW_HOST=192.168.0.37
+DW_PORT=5433
+DW_NAME=dw
+DW_USER=seu_usuario
+DW_PASSWORD=sua_senha
+DW_SCHEMA=torre
+
+# Configurações de E-mail (SMTP)
+SMTP_HOST=smtp.gritsch.com.br
+SMTP_PORT=587
+SMTP_USER=naoresponda@gritsch.com.br
+SMTP_PASSWORD=sua_senha
 ```
-
-3. **Instalação das dependências**:
-
-```bash
-pip install -r requirements.txt
-```
-
-Para forçar um mês diferente do padrão (que é sempre o mês anterior ao atual), edite o arquivo `src/config.py` descomentando as variáveis `MES` e `ANO`.
