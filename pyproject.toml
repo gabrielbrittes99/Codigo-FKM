@@ -1,0 +1,33 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "codigo-fkm"
+version = "2.0.0"
+description = "Pipeline de Dados FKM"
+authors = [
+    { name = "Engenharia de Dados FKM" }
+]
+requires-python = ">=3.10"
+dependencies = [
+    "pandas>=2.0.0",
+    "numpy>=1.24.0",
+    "openpyxl>=3.1.0",
+    "pandera>=0.18.0",
+    "PyYAML>=6.0",
+    "python-dotenv>=1.0.0",
+    "psycopg2-binary>=2.9.0",
+    "pyxlsb>=1.0.10",
+    "pyodbc>=5.0.0"
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0.0",
+    "pytest-cov>=4.0.0"
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]

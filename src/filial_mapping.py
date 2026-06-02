@@ -22,9 +22,14 @@ EXCECOES_FORCADAS = {
     "TAV9E95": "GRITSCH - PET",
     "UBN9E25": "GRITSCH - PET",
     "UBR9B07": "GRITSCH - PET",
+    "SFG4I64": "GRITSCH - PET",
     "SFD4I64": "GRITSCH - PET",
     "UBR9B05": "GRITSCH - PET",
+    # Placas coringas para veículos novos (sem placa/chassi)
+    "TBI2068": "GRITSCH - MATRIZ",
+    "TBI2067": "GRITSCH - MATRIZ",
 }
+
 
 # Tenta carregar ajustes dinâmicos mensais de um arquivo CSV na raiz do projeto
 # O formato esperado é: Placa,Filial
@@ -49,33 +54,7 @@ if os.path.exists(arquivo_ajustes):
 
 # Exceções por ID de Transação (Prioridade Máxima)
 # IDs que devem ser vinculados a filiais específicas independente de placa ou data
-EXCECOES_TRANSACOES = {
-    "19935629": "GRITSCH - CGB",
-    "20106073": "GRITSCH - CGB",
-    "19924905": "GRITSCH - CGB",
-    "19717726": "GRITSCH - CGB",
-    "19604346": "GRITSCH - CGB",
-    "19940525": "GRITSCH - CGB",
-    "19737309": "GRITSCH - CGB",
-    "19947470": "GRITSCH - CGB",
-    "19930937": "GRITSCH - CGB",
-    "20133457": "GRITSCH - CGB",
-    "19783445": "GRITSCH - CGB",
-    "20222996": "GRITSCH - CGB",
-    "19498805": "GRITSCH - CGB",
-    "19522011": "GRITSCH - CGB",
-    "19550177": "GRITSCH - CGB",
-    "19611385": "GRITSCH - CGB",
-    "19700106": "GRITSCH - CGB",
-    "19731279": "GRITSCH - CGB",
-    "19760967": "GRITSCH - CGB",
-    "19788669": "GRITSCH - CGB",
-    "20030753": "GRITSCH - CGB",
-    "20054120": "GRITSCH - CGB",
-    "20075126": "GRITSCH - CGB",
-    "20139101": "GRITSCH - CGB",
-    "20231469": "GRITSCH - CGB",
-}
+EXCECOES_TRANSACOES = {}
 
 
 def normalizar_filial(filial):
@@ -313,6 +292,8 @@ def aplicar_filial_manutencao(
                     for c in row.index
                     if str(c).lower()
                     in [
+                        "transacao",
+                        "transação",
                         "id transacao",
                         "id transação",
                         "id",

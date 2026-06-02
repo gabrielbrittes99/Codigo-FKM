@@ -1,0 +1,16 @@
+project:
+  name: "FKM Data Pipeline"
+  version: "2.0.0"
+
+paths:
+  input_dir: "dados/entrada"
+  output_dir: "Dados Tratados"
+
+patterns:
+  fuel: "Combustivel*.xlsx"
+  maintenance: "Manutencao*.xlsx"
+  fleet: "Frota*.xlsx"
+
+excel_formatting:
+  header_color: "FFFF00"
+  footer_color: "D3D3D3"

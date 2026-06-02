@@ -241,7 +241,7 @@ DADOS_CALCULADOS AS (
             -- Forcar filial por placa
             WHEN b.Placa IN (
                 'UBN-9E24','UBN-9E26','UBK-4B56','UBR-9B03','TAV-9E95',
-                'UBN-9E25','UBR-9B07','SFD-4I64','UBR-9B05'
+                'UBN-9E25','UBR-9B07','SFD-4I64','SFG-4I64','UBR-9B05'
             ) THEN 'GRITSCH - PET'
 
             WHEN b.Placa IN (
@@ -281,14 +281,13 @@ DADOS_CALCULADOS AS (
                     ELSE 'GRITSCH - MATRIZ'
                 END
             ELSE b.FilialOperacional
-        END AS FILIAL_PREVIA
+        END AS FILIAL
     FROM BASE b
 ),
 
 AJUSTE_FINAL AS (
     SELECT
         dc.*,
-        dc.FILIAL_PREVIA AS FILIAL,
         CASE
             WHEN UPPER(TRIM(dc.TipoItem)) = 'PRODUTO' AND UPPER(dc.DescricaoItem) LIKE '%LAMPADA%'
                 THEN '03.03 - MANUTENÇÃO DE VEÍCULOS'
@@ -326,3 +325,7 @@ WHERE
     )
 ORDER BY
     DataCriacao DESC;
+
+-- limpeza opcional
+-- DROP TABLE #Mapeamento;
+-- DROP TABLE #UsuariosFiliais;

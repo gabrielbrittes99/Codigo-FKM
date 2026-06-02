@@ -1,37 +1,35 @@
 """
-Configuração Automática para Geração de FKMs
-Detecta automaticamente mês, ano e arquivos de entrada
-
-IMPORTANTE: Este sistema processa o FECHAMENTO do mês anterior.
-Exemplo: Rodando em Fevereiro/2026 → Processa dados de Janeiro/2026
+Configuração Automática e Baseada em YAML para Geração de FKMs
 """
 
 import glob
 import os
 from datetime import datetime, timedelta
 
+import yaml
+from dotenv import load_dotenv
+
+# Carrega variáveis de ambiente (DB_HOST, DB_USER, etc.) do arquivo .env
+load_dotenv()
+
 # ==================== CAMINHOS BASE ====================
 
-# Diretório root do projeto (um nível acima de src/)
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+# Carregar config.yaml
+YAML_PATH = os.path.join(PROJECT_ROOT, "config.yaml")
+with open(YAML_PATH, "r", encoding="utf-8") as f:
+    config_yaml = yaml.safe_load(f)
+
+DIRETORIO_ENTRADA = os.path.join(PROJECT_ROOT, config_yaml["paths"]["input_dir"])
+DIRETORIO_BASE_SAIDA = os.path.join(PROJECT_ROOT, config_yaml["paths"]["output_dir"])
 
 # ==================== CONFIGURAÇÕES AUTOMÁTICAS ====================
 
-
 def obter_mes_ano_fechamento():
-    """
-    Retorna mês (nome completo em português) e ano do FECHAMENTO
-
-    LÓGICA: Retorna o mês ANTERIOR ao atual
-    - Rodando em Fevereiro/2026 → Retorna Janeiro/2026
-    - Rodando em Janeiro/2026 → Retorna Dezembro/2025
-    """
     agora = datetime.now()
-
-    # Calcular primeiro dia do mês atual e subtrair 1 dia = último dia do mês anterior
     primeiro_dia_mes_atual = agora.replace(day=1)
     ultimo_dia_mes_anterior = primeiro_dia_mes_atual - timedelta(days=1)
-
     meses_pt = {
         1: "Janeiro",
         2: "Fevereiro",
@@ -46,63 +44,37 @@ def obter_mes_ano_fechamento():
         11: "Novembro",
         12: "Dezembro",
     }
-
     mes = meses_pt[ultimo_dia_mes_anterior.month]
     ano = str(ultimo_dia_mes_anterior.year)
-
     return mes, ano
 
 
 def encontrar_arquivo_entrada(padrao):
-    """
-    Busca automaticamente o arquivo de entrada mais recente que corresponde ao padrão.
-    Sempre busca no diretório 'dados/entrada' e retorna caminho absoluto.
-
-    Args:
-        padrao: Padrão do arquivo (ex: "Combustivel*.xlsx", "Manutencao*.xlsx")
-
-    Returns:
-        Caminho absoluto do arquivo encontrado ou None
-    """
-    caminho_busca = os.path.join(PROJECT_ROOT, "dados", "entrada", padrao)
+    caminho_busca = os.path.join(DIRETORIO_ENTRADA, padrao)
     arquivos_encontrados = glob.glob(caminho_busca)
-
     if not arquivos_encontrados:
         return None
-
-    # Se houver múltiplos arquivos, pegar o mais recente
     if len(arquivos_encontrados) > 1:
         arquivos_encontrados.sort(key=os.path.getmtime, reverse=True)
-
     return arquivos_encontrados[0]
 
 
 # ==================== VARIÁVEIS PRINCIPAIS ====================
 
-# Detectar mês e ano do FECHAMENTO (mês anterior) automaticamente
 MES, ANO = obter_mes_ano_fechamento()
 
-# Se quiser forçar um mês/ano específico de fechamento, descomente e edite as linhas abaixo:
-# MES = "Janeiro"
-# ANO = "2026"
+ARQUIVO_ENTRADA_COMBUSTIVEL = encontrar_arquivo_entrada(config_yaml["patterns"]["fuel"])
+ARQUIVO_ENTRADA_MANUTENCAO = encontrar_arquivo_entrada(
+    config_yaml["patterns"]["maintenance"]
+)
+ARQUIVO_ENTRADA_FROTA = encontrar_arquivo_entrada(config_yaml["patterns"]["fleet"])
 
-# Diretório base de saída
-DIRETORIO_BASE_SAIDA = os.path.join(PROJECT_ROOT, "Dados Tratados")
-
-# Detectar automaticamente os arquivos de entrada (caminhos absolutos)
-ARQUIVO_ENTRADA_COMBUSTIVEL = encontrar_arquivo_entrada("Combustivel*.xlsx")
-ARQUIVO_ENTRADA_MANUTENCAO = encontrar_arquivo_entrada("Manutencao*.xlsx")
-ARQUIVO_ENTRADA_FROTA = encontrar_arquivo_entrada("Frota*.xlsx")
-
-# Nome da pasta do período
 PASTA_PERIODO = f"{MES} {ANO}"
-
 
 # ==================== FUNÇÕES AUXILIARES ====================
 
 
 def obter_numero_mes():
-    """Retorna o número do mês (01-12) baseado no nome do mês"""
     meses = {
         "Janeiro": "01",
         "Fevereiro": "02",
@@ -121,10 +93,6 @@ def obter_numero_mes():
 
 
 def obter_caminho_saida_filial(nome_filial):
-    """
-    Retorna o caminho da pasta de saída para uma filial específica.
-    Estrutura: Dados Tratados/Março 2026/GRITSCH - CSC/
-    """
     nome_limpo = "".join(
         c for c in str(nome_filial) if c.isalnum() or c in (" ", "_", "-")
     ).strip()
@@ -132,25 +100,19 @@ def obter_caminho_saida_filial(nome_filial):
 
 
 def obter_caminho_saida_combustivel():
-    """Retorna o caminho completo da pasta de saída para combustível (legado)"""
     return os.path.join(DIRETORIO_BASE_SAIDA, PASTA_PERIODO)
 
 
 def obter_caminho_saida_manutencao():
-    """Retorna o caminho completo da pasta de saída para manutenção (legado)"""
     return os.path.join(DIRETORIO_BASE_SAIDA, PASTA_PERIODO)
 
 
 def validar_configuracao():
-    """
-    Valida se todas as configurações estão corretas
-    Retorna True se OK, ou imprime avisos/erros
-    """
     print("=" * 80)
-    print("VALIDAÇÃO DE CONFIGURAÇÃO - FECHAMENTO MENSAL")
+    print(
+        f"VALIDAÇÃO DE CONFIGURAÇÃO - {config_yaml['project']['name']} v{config_yaml['project']['version']}"
+    )
     print("=" * 80)
-
-    # Mostrar mês atual vs mês de fechamento
     agora = datetime.now()
     meses_pt = {
         1: "Janeiro",
@@ -167,79 +129,33 @@ def validar_configuracao():
         12: "Dezembro",
     }
     mes_atual = meses_pt[agora.month]
-
     print(f"\n📅 Mês Atual: {mes_atual}/{agora.year}")
     print(f"📊 Processando Fechamento de: {MES}/{ANO}")
-
     valido = True
-
-    # Validar arquivo de combustível
-    if ARQUIVO_ENTRADA_COMBUSTIVEL:
-        if os.path.exists(ARQUIVO_ENTRADA_COMBUSTIVEL):
-            print(
-                f"\n✅ Arquivo de combustível encontrado: {os.path.basename(ARQUIVO_ENTRADA_COMBUSTIVEL)}"
-            )
-        else:
-            print(
-                f"\n⚠️  Arquivo de combustível não encontrado: {ARQUIVO_ENTRADA_COMBUSTIVEL}"
-            )
-            valido = False
-    else:
+    if ARQUIVO_ENTRADA_COMBUSTIVEL and os.path.exists(ARQUIVO_ENTRADA_COMBUSTIVEL):
         print(
-            f"\n❌ Nenhum arquivo de combustível encontrado (padrão: Combustivel*.xlsx)"
+            f"\n✅ Arquivo de combustível encontrado: {os.path.basename(ARQUIVO_ENTRADA_COMBUSTIVEL)}"
         )
+    else:
+        print(f"\n❌ Arquivo de combustível não encontrado.")
         valido = False
-
-    # Validar arquivo de manutenção
-    if ARQUIVO_ENTRADA_MANUTENCAO:
-        if os.path.exists(ARQUIVO_ENTRADA_MANUTENCAO):
-            print(
-                f"✅ Arquivo de manutenção encontrado: {os.path.basename(ARQUIVO_ENTRADA_MANUTENCAO)}"
-            )
-        else:
-            print(
-                f"⚠️  Arquivo de manutenção não encontrado: {ARQUIVO_ENTRADA_MANUTENCAO}"
-            )
-            valido = False
+    if ARQUIVO_ENTRADA_MANUTENCAO and os.path.exists(ARQUIVO_ENTRADA_MANUTENCAO):
+        print(
+            f"✅ Arquivo de manutenção encontrado: {os.path.basename(ARQUIVO_ENTRADA_MANUTENCAO)}"
+        )
     else:
-        print(f"❌ Nenhum arquivo de manutenção encontrado (padrão: Manutencao*.xlsx)")
+        print(f"⚠️ Arquivo de manutenção não encontrado.")
         valido = False
-
-    # Validar arquivo de frota (opcional mas recomendado)
-    if ARQUIVO_ENTRADA_FROTA:
-        if os.path.exists(ARQUIVO_ENTRADA_FROTA):
-            print(
-                f"✅ Arquivo de frota encontrado: {os.path.basename(ARQUIVO_ENTRADA_FROTA)}"
-            )
-        else:
-            print(f"⚠️  Arquivo de frota não encontrado: {ARQUIVO_ENTRADA_FROTA}")
-    else:
+    if ARQUIVO_ENTRADA_FROTA and os.path.exists(ARQUIVO_ENTRADA_FROTA):
         print(
-            f"⚠️  Nenhum arquivo de frota encontrado (padrão: Frota*.xlsx) - KPIs por grupo indisponíveis"
-        )
-
-    # Validar diretório de saída
-    print(
-        f"\n📁 Diretório de saída: {os.path.join(DIRETORIO_BASE_SAIDA, PASTA_PERIODO)}"
-    )
-    print(
-        f"   Estrutura: {PASTA_PERIODO}/<FILIAL>/Combustivel-*.xlsx + Manutencao-*.xlsx"
-    )
-
-    if valido:
-        print(
-            f"\n✅ Configuração válida! Pronto para processar fechamento de {MES}/{ANO}"
+            f"✅ Arquivo de frota encontrado: {os.path.basename(ARQUIVO_ENTRADA_FROTA)}"
         )
     else:
-        print(f"\n⚠️  Verifique os arquivos de entrada antes de continuar.")
-
+        print(f"⚠️ Nenhum arquivo de frota encontrado.")
     print("=" * 80)
+    return valido
 
     return valido
 
-
-# ==================== AUTO-VALIDAÇÃO (OPCIONAL) ====================
-
 if __name__ == "__main__":
-    # Se executar este arquivo diretamente, mostra a configuração
     validar_configuracao()

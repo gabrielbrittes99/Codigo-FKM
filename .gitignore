@@ -54,6 +54,7 @@ DIAGNOSTICO*.xlsx
 # Pastas de saída
 Arquivos FKMs/
 Dados Tratados/
+dados/entrada/
 
 # Planilhas organizadas
 planilhas-antigas/

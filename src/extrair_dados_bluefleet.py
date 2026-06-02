@@ -10,6 +10,7 @@ import sys
 
 import pandas as pd
 import pyodbc
+import psycopg2
 from dotenv import load_dotenv
 
 from src import config
@@ -40,18 +41,35 @@ SQL_FILE_PATH = os.path.join(
 )
 
 
-def carregar_sql(mes_num: int, ano: int) -> str:
-    """
-    Carrega o SQL do arquivo .sql, remove a linha USE referencia;
-    e substitui o filtro de DataCriacao pelo período informado.
-    """
-    if not os.path.exists(SQL_FILE_PATH):
-        raise FileNotFoundError(f"Arquivo SQL não encontrado: {SQL_FILE_PATH}")
+def obter_conexao_dw():
+    """Retorna uma conexão psycopg2 com o PostgreSQL DW."""
+    host = os.getenv("DW_HOST")
+    port = os.getenv("DW_PORT", "5432")
+    db = os.getenv("DW_NAME")
+    user = os.getenv("DW_USER")
+    pwd = os.getenv("DW_PASSWORD")
 
-    with open(SQL_FILE_PATH, "r", encoding="utf-8", errors="replace") as f:
-        sql = f.read()
+    if not all([host, db, user, pwd]):
+        raise EnvironmentError(
+            "Variáveis de ambiente do DW incompletas. "
+            "Configure DW_HOST, DW_NAME, DW_USER e DW_PASSWORD no arquivo .env"
+        )
 
-    sql = re.sub(r"^\s*USE\s+\w+\s*;?\s*$", "", sql, flags=re.MULTILINE | re.IGNORECASE)
+    return psycopg2.connect(
+        host=host,
+        port=port,
+        database=db,
+        user=user,
+        password=pwd
+    )
+
+
+def extrair_manutencao(mes_nome, ano):
+    print(f"\n🔄 Iniciando extração de MANUTENÇÃO ({mes_nome}/{ano})...")
+
+    mes_num = MESES_PT.get(mes_nome)
+    if not mes_num:
+        raise ValueError(f"Mês inválido: {mes_nome}")
 
     if mes_num == 12:
         ano_prox = ano + 1
@@ -63,35 +81,12 @@ def carregar_sql(mes_num: int, ano: int) -> str:
     data_inicio = f"{ano}-{mes_num:02d}-01"
     data_fim = f"{ano_prox}-{mes_prox:02d}-01"
 
-    sql = re.sub(
-        r"DECLARE\s+@DataIni\s+DATETIME\s*=\s*DATEADD\s*\(.*?\)\s*;",
-        f"DECLARE @DataIni DATETIME = '{data_inicio}';",
-        sql,
-        flags=re.IGNORECASE,
-    )
-
-    sql = re.sub(
-        r"DECLARE\s+@DataFim\s+DATETIME\s*=\s*DATEADD\s*\(.*?\)\s*;",
-        f"DECLARE @DataFim DATETIME = '{data_fim}';",
-        sql,
-        flags=re.IGNORECASE,
-    )
-
-    return sql
-
-
-def extrair_manutencao(mes_nome, ano):
-    print(f"\n🔄 Iniciando extração de MANUTENÇÃO ({mes_nome}/{ano})...")
-
-    mes_num = MESES_PT.get(mes_nome)
-    if not mes_num:
-        raise ValueError(f"Mês inválido: {mes_nome}")
-
-    try:
-        sql = carregar_sql(mes_num, ano)
-    except Exception as e:
-        print(f"❌ Erro ao carregar SQL de manutenção: {e}")
-        return None
+    query = f"""
+    SELECT * 
+    FROM [referencia].[dbo].[vw_RelatorioFKM_Historico]
+    WHERE DataCriacao >= '{data_inicio}' AND DataCriacao < '{data_fim}'
+    ORDER BY DataCriacao DESC;
+    """
 
     try:
         conn = obter_conexao_bluefleet()
@@ -103,7 +98,7 @@ def extrair_manutencao(mes_nome, ano):
             warnings.simplefilter("ignore", UserWarning)
 
             cursor = conn.cursor()
-            cursor.execute(sql)
+            cursor.execute(query)
 
             while cursor.description is None:
                 if not cursor.nextset():
@@ -134,7 +129,7 @@ def extrair_frota():
         Placa,
         Modelo,
         CASE
-            WHEN Placa IN ('UBN-9E24','UBN-9E26','UBK-4B56','UBR-9B03','TAV-9E95','UBN-9E25','UBR-9B07','SFD-4I64','UBR-9B05') THEN 'GRITSCH - PET'
+            WHEN Placa IN ('UBN-9E24','UBN-9E26','UBK-4B56','UBR-9B03','TAV-9E95','UBN-9E25','UBR-9B07','SFD-4I64','SFG-4I64','UBR-9B05') THEN 'GRITSCH - PET'
             ELSE FilialOperacional
         END AS FilialOperacional,
         SituacaoVeiculo
@@ -142,7 +137,7 @@ def extrair_frota():
         dbo.Veiculos
     WHERE
         SituacaoVeiculo <> 'Vendido'
-        AND (FilialOperacional LIKE '%GRIT%' OR Placa IN ('UBN-9E24','UBN-9E26','UBK-4B56','UBR-9B03','TAV-9E95','UBN-9E25','UBR-9B07','SFD-4I64','UBR-9B05'))
+        AND (FilialOperacional LIKE '%GRIT%' OR Placa IN ('UBN-9E24','UBN-9E26','UBK-4B56','UBR-9B03','TAV-9E95','UBN-9E25','UBR-9B07','SFD-4I64','SFG-4I64','UBR-9B05'))
     ORDER BY
         FilialOperacional,
         Placa;
@@ -166,9 +161,54 @@ def extrair_frota():
         return None
 
 
+def extrair_combustivel(mes_nome, ano):
+    print(f"\n🔄 Iniciando extração de COMBUSTÍVEL ({mes_nome}/{ano})...")
+
+    mes_num = MESES_PT.get(mes_nome)
+    if not mes_num:
+        raise ValueError(f"Mês inválido: {mes_nome}")
+
+    if mes_num == 12:
+        ano_prox = ano + 1
+        mes_prox = 1
+    else:
+        ano_prox = ano
+        mes_prox = mes_num + 1
+
+    data_inicio = f"{ano}-{mes_num:02d}-01"
+    data_fim = f"{ano_prox}-{mes_prox:02d}-01"
+
+    query = f"""
+    SELECT * 
+    FROM torre.vw_RelatorioFKM_Combustivel
+    WHERE "Data da transacao" >= '{data_inicio}' AND "Data da transacao" < '{data_fim}'
+      AND "Status" = 'APROVADA'
+      AND "Servico" = 'ABASTECIMENTO'
+    ORDER BY "Data da transacao" DESC, "Transacao" DESC;
+    """
+
+    try:
+        conn = obter_conexao_dw()
+        print("   Conectado ao DW (PostgreSQL).")
+
+        import warnings
+
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", UserWarning)
+            df = pd.read_sql(query, conn)
+
+        conn.close()
+
+        print(f"✅ Extração de Combustível concluída. {len(df)} registros encontrados.")
+        return df
+    except Exception as e:
+        print(f"❌ Erro ao extrair Combustível do banco: {e}")
+        return None
+
+
 def main():
     print("=" * 80)
-    print(f"EXTRAÇÃO DE DADOS BLUEFLEET - {config.MES}/{config.ANO}")
+    print(f"EXTRAÇÃO DE DADOS BANCO DE DADOS - {config.MES}/{config.ANO}")
     print("=" * 80)
 
     # Identificar nomenclaturas para os arquivos
@@ -180,6 +220,10 @@ def main():
         config.DIRETORIO_ENTRADA, f"Manutencao {sufixo_arquivo}"
     )
     arquivo_frota = os.path.join(config.DIRETORIO_ENTRADA, f"Frota {sufixo_arquivo}")
+    arquivo_combustivel = os.path.join(config.DIRETORIO_ENTRADA, f"Combustivel {sufixo_arquivo}")
+
+    # Criar diretório de entrada caso não exista
+    os.makedirs(config.DIRETORIO_ENTRADA, exist_ok=True)
 
     # 1. Extrair Manutenção
     df_manutencao = extrair_manutencao(config.MES, int(config.ANO))
@@ -193,6 +237,18 @@ def main():
     if df_frota is not None and not df_frota.empty:
         print(f"📝 Salvando {os.path.basename(arquivo_frota)}...")
         df_frota.to_excel(arquivo_frota, index=False, engine="openpyxl")
+        print("   Salvo com sucesso!")
+
+    # 3. Extrair Combustível
+    df_combustivel = extrair_combustivel(config.MES, int(config.ANO))
+    if df_combustivel is not None and not df_combustivel.empty:
+        print(f"📝 Salvando {os.path.basename(arquivo_combustivel)}...")
+        # Remover colunas auxiliares que não fazem parte do relatório final antes de salvar
+        if "Status" in df_combustivel.columns:
+            df_combustivel = df_combustivel.drop(columns=["Status"])
+        if "Servico" in df_combustivel.columns:
+            df_combustivel = df_combustivel.drop(columns=["Servico"])
+        df_combustivel.to_excel(arquivo_combustivel, index=False, engine="openpyxl")
         print("   Salvo com sucesso!")
 
     print("\n" + "=" * 80)

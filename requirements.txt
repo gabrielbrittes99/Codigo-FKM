@@ -5,10 +5,15 @@
 pandas>=2.0.0
 numpy>=1.24.0
 openpyxl>=3.1.0
+pandera>=0.18.0
 
-# Conexão com banco de dados SQL Server
-pyodbc>=5.0.0
+# Configuração e Ambiente
+PyYAML>=6.0
 python-dotenv>=1.0.0
+
+# Testes e Qualidade (Desenvolvimento)
+pytest>=7.0.0
+pytest-cov>=4.0.0
 
 # Conexão com PostgreSQL (TruckPag + DW Torre)
 psycopg2-binary>=2.9.0
