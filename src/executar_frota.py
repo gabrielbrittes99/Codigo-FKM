@@ -68,6 +68,9 @@ def extrair_frota_bluefleet():
     df = pd.read_sql(query, conn)
     conn.close()
 
+    if "Placa" in df.columns:
+        df["Placa"] = df["Placa"].astype(str).str.replace("-", "", regex=False).str.strip().str.upper()
+
     print(f"✅ Extração concluída. Total de veículos encontrados: {len(df)}")
     return df
 

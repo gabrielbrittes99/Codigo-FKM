@@ -28,6 +28,8 @@ EXCECOES_FORCADAS = {
     # Placas coringas para veículos novos (sem placa/chassi)
     "TBI2068": "GRITSCH - MATRIZ",
     "TBI2067": "GRITSCH - MATRIZ",
+    "TAX5J72": "GRITSCH - LDB",
+    "SFL-1E4": "GRITSCH - PMW",
 }
 
 

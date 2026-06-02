@@ -154,6 +154,9 @@ def extrair_frota():
 
         conn.close()
 
+        if "Placa" in df.columns:
+            df["Placa"] = df["Placa"].astype(str).str.replace("-", "", regex=False).str.strip().str.upper()
+
         print(f"✅ Extração de Frota concluída. {len(df)} veículos encontrados.")
         return df
     except Exception as e:
