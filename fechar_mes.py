@@ -54,6 +54,7 @@ def main():
         ("src.executar_manutencao", "3. Geração dos Resumos de Manutenção por Filial"),
         ("src.executar_frota", "4. Geração dos Resumos de Frota por Filial"),
         ("src.gerar_relatorio_kpis", "5. Geração do Relatório Consolidado de KPIs"),
+        # ("src.enviar_emails", "6. Envio Automático de E-mails para as Filiais"),
     ]
 
     for modulo, descricao in etapas:

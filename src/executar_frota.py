@@ -52,7 +52,7 @@ def extrair_frota_bluefleet():
         Placa,
         Modelo,
         CASE
-            WHEN Placa IN ('UBN-9E24','UBN-9E26','UBK-4B56','UBR-9B03','TAV-9E95','UBN-9E25','UBR-9B07','SFD-4I64','UBR-9B05') THEN 'GRITSCH - PET'
+            WHEN Placa IN ('UBN-9E24','UBN-9E26','UBK-4B56','UBR-9B03','TAV-9E95','UBN-9E25','UBR-9B07','SFD-4I64','SFG-4I64','UBR-9B05') THEN 'GRITSCH - PET'
             ELSE FilialOperacional
         END AS FilialOperacional,
         SituacaoVeiculo
@@ -60,7 +60,7 @@ def extrair_frota_bluefleet():
         dbo.Veiculos
     WHERE
         SituacaoVeiculo <> 'Vendido'
-        AND (FilialOperacional LIKE '%GRIT%' OR Placa IN ('UBN-9E24','UBN-9E26','UBK-4B56','UBR-9B03','TAV-9E95','UBN-9E25','UBR-9B07','SFD-4I64','UBR-9B05'))
+        AND (FilialOperacional LIKE '%GRIT%' OR Placa IN ('UBN-9E24','UBN-9E26','UBK-4B56','UBR-9B03','TAV-9E95','UBN-9E25','UBR-9B07','SFD-4I64','SFG-4I64','UBR-9B05'))
     ORDER BY
         FilialOperacional,
         Placa;
