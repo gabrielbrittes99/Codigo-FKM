@@ -56,7 +56,13 @@ if os.path.exists(arquivo_ajustes):
 
 # Exceções por ID de Transação (Prioridade Máxima)
 # IDs que devem ser vinculados a filiais específicas independente de placa ou data
-EXCECOES_TRANSACOES = {}
+EXCECOES_TRANSACOES = {
+    "21752427": "GRITSCH - CGB",
+    "21583586": "GRITSCH - CGB",
+    "21560500": "GRITSCH - CGB",
+    "21432518": "GRITSCH - CGB",
+    "21359133": "GRITSCH - CGB",
+}
 
 
 def normalizar_filial(filial):
