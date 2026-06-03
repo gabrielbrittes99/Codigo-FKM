@@ -63,3 +63,7 @@ planilhas-teste/
 # Claude
 .claude/
 ajustes_placas.csv
+
+# Arquivos retornados para auditoria
+dados/retornados/*.xls
+dados/retornados/*.xlsx
