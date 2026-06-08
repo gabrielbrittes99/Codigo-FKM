@@ -135,6 +135,27 @@ def processar_correcoes_arquivo(caminho_arq, mes_ano_cod):
     df_frota, df_comb = carregar_dados_oficiais(folder_name)
     frota_plates = set(df_frota[df_frota["Placa_Clean"] != "TOTAL DE VEÍCULOS"]["Placa_Clean"])
     
+    # Separar combustível e Arla oficial
+    df_comb_arla = pd.DataFrame(columns=["Placa_Clean", "Arla_Valor_Source"])
+    df_comb_no_arla = pd.DataFrame(columns=["Placa_Clean", "Fuel_Liters_Source", "Fuel_Valor_Source"])
+    
+    if not df_comb.empty:
+        if "Combustivel" in df_comb.columns:
+            mask_arla = df_comb["Combustivel"].str.contains("Arla", case=False, na=False)
+            df_comb_arla = df_comb[mask_arla].groupby("Placa_Clean").agg(
+                Arla_Valor_Source=("Valor total", "sum")
+            ).reset_index()
+            
+            df_comb_no_arla = df_comb[~mask_arla].groupby("Placa_Clean").agg(
+                Fuel_Liters_Source=("Litragem", "sum"),
+                Fuel_Valor_Source=("Valor total", "sum")
+            ).reset_index()
+        else:
+            df_comb_no_arla = df_comb.groupby("Placa_Clean").agg(
+                Fuel_Liters_Source=("Litragem", "sum"),
+                Fuel_Valor_Source=("Valor total", "sum")
+            ).reset_index()
+    
     # Identificar linha de cabeçalhos
     header_row_idx = 3
     for idx in range(min(15, sheet.nrows)):
@@ -154,6 +175,9 @@ def processar_correcoes_arquivo(caminho_arq, mes_ano_cod):
     col_km_ini = col_map.get("Km Inicial", 9)
     col_km_fim = col_map.get("Km Final", 10)
     col_km_tot = col_map.get("Total de Km", 11)
+    col_litros = col_map.get("Litros Comb.", 12)
+    col_valor = col_map.get("Valor Comb.", 13)
+    col_arla = col_map.get("Arla", 16)
     
     # Ler as placas e linhas da planilha
     fkm_rows = [] # list of dict: {row_idx, placa_clean, original_placa}
@@ -190,6 +214,7 @@ def processar_correcoes_arquivo(caminho_arq, mes_ano_cod):
             if len(sugestoes) == 1:
                 placa_replacements[row["row_idx"]] = (row["original_val"], sugestoes[0])
                 correcoes_aplicadas.append(f"Placa corrigida: '{row['original_val']}' ➔ '{sugestoes[0]}' na linha {row['row_idx'] + 1}")
+                row["placa_clean"] = sugestoes[0]
                 
     # 2. Tentar corrigir odômetros invertidos
     odo_swaps = [] # list of tuples: (row_idx1, row_idx2, placa1, placa2)
@@ -216,10 +241,6 @@ def processar_correcoes_arquivo(caminho_arq, mes_ano_cod):
         for row in fkm_rows:
             r = row["row_idx"]
             placa = row["placa_clean"]
-            # Lidar com placa que vai ser renomeada
-            if r in placa_replacements:
-                placa = placa_replacements[r][1]
-                
             val_ini = sheet.cell_value(r, col_km_ini)
             val_fim = sheet.cell_value(r, col_km_fim)
             try:
@@ -270,8 +291,295 @@ def processar_correcoes_arquivo(caminho_arq, mes_ano_cod):
                     placas_pareadas.add(p2)
                     correcoes_aplicadas.append(f"Hodômetros desinvertidos entre as placas '{p1}' e '{p2}' (linhas {row_by_plate[p1] + 1} e {row_by_plate[p2] + 1})")
                     
-    if not placa_replacements and not odo_swaps:
-        print(f"   {GREEN}✔ Nenhuma correção óbvia necessária neste arquivo.{RESET}")
+    # 3. Tentar corrigir combustível e arla dos veículos (agrupando por placa para evitar bugs com placas duplicadas)
+    fkm_rows_by_plate = {}
+    for row in fkm_rows:
+        placa = row["placa_clean"]
+        r = row["row_idx"]
+        
+        fkm_litros = sheet.cell_value(r, col_litros)
+        fkm_valor = sheet.cell_value(r, col_valor)
+        fkm_arla = sheet.cell_value(r, col_arla)
+        
+        fkm_litros = float(fkm_litros) if fkm_litros != "" else 0.0
+        fkm_valor = float(fkm_valor) if fkm_valor != "" else 0.0
+        fkm_arla = float(fkm_arla) if fkm_arla != "" else 0.0
+        
+        if placa not in fkm_rows_by_plate:
+            fkm_rows_by_plate[placa] = []
+            
+        fkm_rows_by_plate[placa].append({
+            "row_idx": r,
+            "litros": fkm_litros,
+            "valor": fkm_valor,
+            "arla": fkm_arla
+        })
+
+    fuel_corrections = []
+    oficial_litros = {}
+    oficial_valor = {}
+    oficial_arla = {}
+    
+    if not df_comb_no_arla.empty:
+        oficial_litros = df_comb_no_arla.set_index("Placa_Clean")["Fuel_Liters_Source"].to_dict()
+        oficial_valor = df_comb_no_arla.set_index("Placa_Clean")["Fuel_Valor_Source"].to_dict()
+    if not df_comb_arla.empty:
+        oficial_arla = df_comb_arla.set_index("Placa_Clean")["Arla_Valor_Source"].to_dict()
+        
+    for placa, rows in fkm_rows_by_plate.items():
+        sum_fkm_litros = sum(row["litros"] for row in rows)
+        sum_fkm_valor = sum(row["valor"] for row in rows)
+        sum_fkm_arla = sum(row["arla"] for row in rows)
+        
+        ref_litros = oficial_litros.get(placa, 0.0)
+        ref_valor = oficial_valor.get(placa, 0.0)
+        ref_arla = oficial_arla.get(placa, 0.0)
+        
+        # Só atualiza se houver dados no oficial (protegendo abastecimentos manuais externos)
+        if ref_litros > 0 or ref_valor > 0:
+            if abs(sum_fkm_litros - ref_litros) > 0.1 or abs(sum_fkm_valor - ref_valor) > 1.0:
+                first_r = rows[0]["row_idx"]
+                fuel_corrections.append((first_r, col_litros, rows[0]["litros"], ref_litros))
+                fuel_corrections.append((first_r, col_valor, rows[0]["valor"], ref_valor))
+                for row in rows[1:]:
+                    other_r = row["row_idx"]
+                    fuel_corrections.append((other_r, col_litros, row["litros"], 0.0))
+                    fuel_corrections.append((other_r, col_valor, row["valor"], 0.0))
+                
+                if len(rows) > 1:
+                    correcoes_aplicadas.append(f"Combustível Placa {placa} (duplicada) corrigido para oficial (L: {ref_litros:.2f}, V: R$ {ref_valor:.2f}) - distribuído em {len(rows)} linhas")
+                else:
+                    correcoes_aplicadas.append(f"Combustível Placa {placa} (linha {first_r+1}) corrigido para oficial (L: {ref_litros:.2f}, V: R$ {ref_valor:.2f})")
+                
+        if ref_arla > 0:
+            if abs(sum_fkm_arla - ref_arla) > 1.0:
+                first_r = rows[0]["row_idx"]
+                fuel_corrections.append((first_r, col_arla, rows[0]["arla"], ref_arla))
+                for row in rows[1:]:
+                    other_r = row["row_idx"]
+                    fuel_corrections.append((other_r, col_arla, row["arla"], 0.0))
+                
+                if len(rows) > 1:
+                    correcoes_aplicadas.append(f"Arla Placa {placa} (duplicada) corrigido para oficial (V: R$ {ref_arla:.2f}) - distribuído em {len(rows)} linhas")
+                else:
+                    correcoes_aplicadas.append(f"Arla Placa {placa} (linha {first_r+1}) corrigido para oficial (V: R$ {ref_arla:.2f})")
+
+    # 4. Tentar corrigir a tabela de postos autorizados (la em baixo)
+    posto_start_row = None
+    posto_total_row = None
+    for r in range(sheet.nrows):
+        for c in range(min(5, sheet.ncols)):
+            val = str(sheet.cell_value(r, c)).strip()
+            if "Postos Autorizados" in val:
+                posto_start_row = r
+                break
+        if posto_start_row is not None:
+            break
+            
+    if posto_start_row is not None:
+        for r in range(posto_start_row + 1, sheet.nrows):
+            val = str(sheet.cell_value(r, 0)).strip()
+            if "TOTAL" in val:
+                posto_total_row = r
+                break
+
+    post_row_updates = {}
+    
+    def normalize_name(name):
+        if not name:
+            return ""
+        import unicodedata
+        name = unicodedata.normalize('NFKD', str(name)).encode('ASCII', 'ignore').decode('ASCII')
+        name = "".join(c for c in name if c.isalnum()).upper().strip()
+        return name
+
+    official_postos = {}
+    if not df_comb.empty:
+        for _, row in df_comb.iterrows():
+            est = str(row.get("Estabelecimento", "")).strip()
+            if not est or pd.isna(row.get("Estabelecimento")):
+                continue
+                
+            litros = float(row.get("Litragem", 0.0))
+            valor = float(row.get("Valor total", 0.0))
+            combustivel = str(row.get("Combustivel", "")).lower()
+            is_arla = "arla" in combustivel
+            
+            est_norm = normalize_name(est)
+            if est_norm not in official_postos:
+                official_postos[est_norm] = {
+                    "original_name": est,
+                    "litros_fuel": 0.0,
+                    "valor_fuel": 0.0,
+                    "litros_arla": 0.0,
+                    "valor_arla": 0.0
+                }
+                
+            if is_arla:
+                official_postos[est_norm]["litros_arla"] += litros
+                official_postos[est_norm]["valor_arla"] += valor
+            else:
+                official_postos[est_norm]["litros_fuel"] += litros
+                official_postos[est_norm]["valor_fuel"] += valor
+
+    if posto_start_row is not None and posto_total_row is not None:
+        col_p_litros_fuel = 4
+        col_p_valor_fuel = 6
+        col_p_litros_arla = 11
+        col_p_valor_arla = 12
+        col_p_tot_litros = 14
+        col_p_tot_valor = 16
+        
+        matched_est_norms = set()
+        
+        for r in range(posto_start_row + 1, posto_total_row):
+            est_name_raw = sheet.cell_value(r, 0)
+            est_name = str(est_name_raw).strip()
+            if not est_name:
+                continue
+                
+            est_norm = normalize_name(est_name)
+            match_data = None
+            if est_norm in official_postos:
+                match_data = official_postos[est_norm]
+                matched_est_norms.add(est_norm)
+            else:
+                for est_n, data in official_postos.items():
+                    if est_n in est_norm or est_norm in est_n:
+                        match_data = data
+                        matched_est_norms.add(est_n)
+                        break
+                        
+            if match_data:
+                litros_fuel = match_data["litros_fuel"]
+                valor_fuel = match_data["valor_fuel"]
+                litros_arla = match_data["litros_arla"]
+                valor_arla = match_data["valor_arla"]
+                
+                curr_lf = float(sheet.cell_value(r, col_p_litros_fuel)) if sheet.cell_value(r, col_p_litros_fuel) != "" else 0.0
+                curr_vf = float(sheet.cell_value(r, col_p_valor_fuel)) if sheet.cell_value(r, col_p_valor_fuel) != "" else 0.0
+                curr_la = float(sheet.cell_value(r, col_p_litros_arla)) if sheet.cell_value(r, col_p_litros_arla) != "" else 0.0
+                curr_va = float(sheet.cell_value(r, col_p_valor_arla)) if sheet.cell_value(r, col_p_valor_arla) != "" else 0.0
+                
+                if (abs(curr_lf - litros_fuel) > 0.1 or abs(curr_vf - valor_fuel) > 1.0 or 
+                    abs(curr_la - litros_arla) > 0.1 or abs(curr_va - valor_arla) > 1.0):
+                    post_row_updates[r] = {
+                        col_p_litros_fuel: litros_fuel,
+                        col_p_valor_fuel: valor_fuel,
+                        col_p_litros_arla: litros_arla,
+                        col_p_valor_arla: valor_arla,
+                        col_p_tot_litros: litros_fuel + litros_arla,
+                        col_p_tot_valor: valor_fuel + valor_arla
+                    }
+                    correcoes_aplicadas.append(f"Posto '{est_name}' (linha {r+1}) atualizado com valores oficiais (L: {litros_fuel:.2f}, V: R$ {valor_fuel:.2f})")
+            else:
+                curr_lf = float(sheet.cell_value(r, col_p_litros_fuel)) if sheet.cell_value(r, col_p_litros_fuel) != "" else 0.0
+                curr_vf = float(sheet.cell_value(r, col_p_valor_fuel)) if sheet.cell_value(r, col_p_valor_fuel) != "" else 0.0
+                if curr_lf > 0 or curr_vf > 0:
+                    post_row_updates[r] = {
+                        col_p_litros_fuel: 0.0,
+                        col_p_valor_fuel: 0.0,
+                        col_p_litros_arla: 0.0,
+                        col_p_valor_arla: 0.0,
+                        col_p_tot_litros: 0.0,
+                        col_p_tot_valor: 0.0
+                    }
+                    correcoes_aplicadas.append(f"Posto '{est_name}' (linha {r+1}) limpo (não consta no oficial)")
+
+        unmatched_est_norms = set(official_postos.keys()) - matched_est_norms
+        if unmatched_est_norms:
+            empty_rows = []
+            for r in range(posto_start_row + 1, posto_total_row):
+                val = str(sheet.cell_value(r, 0)).strip()
+                if not val and r not in post_row_updates:
+                    empty_rows.append(r)
+                    
+            for est_n in sorted(list(unmatched_est_norms)):
+                if not empty_rows:
+                    print(f"   {YELLOW}⚠️ Sem linhas vazias na tabela de postos para inserir {official_postos[est_n]['original_name']}{RESET}")
+                    break
+                target_row = empty_rows.pop(0)
+                match_data = official_postos[est_n]
+                
+                litros_fuel = match_data["litros_fuel"]
+                valor_fuel = match_data["valor_fuel"]
+                litros_arla = match_data["litros_arla"]
+                valor_arla = match_data["valor_arla"]
+                
+                post_row_updates[target_row] = {
+                    0: match_data["original_name"],
+                    col_p_litros_fuel: litros_fuel,
+                    col_p_valor_fuel: valor_fuel,
+                    col_p_litros_arla: litros_arla,
+                    col_p_valor_arla: valor_arla,
+                    col_p_tot_litros: litros_fuel + litros_arla,
+                    col_p_tot_valor: valor_fuel + valor_arla
+                }
+                correcoes_aplicadas.append(f"Inserido posto oficial ausente '{match_data['original_name']}' na linha {target_row+1}")
+
+        if post_row_updates:
+            total_p_litros_fuel = 0.0
+            total_p_valor_fuel = 0.0
+            total_p_litros_arla = 0.0
+            total_p_valor_arla = 0.0
+            total_p_tot_litros = 0.0
+            total_p_tot_valor = 0.0
+            
+            for r in range(posto_start_row + 1, posto_total_row):
+                if r in post_row_updates:
+                    lf = post_row_updates[r].get(col_p_litros_fuel, 0.0)
+                    vf = post_row_updates[r].get(col_p_valor_fuel, 0.0)
+                    la = post_row_updates[r].get(col_p_litros_arla, 0.0)
+                    va = post_row_updates[r].get(col_p_valor_arla, 0.0)
+                    tl = post_row_updates[r].get(col_p_tot_litros, 0.0)
+                    tv = post_row_updates[r].get(col_p_tot_valor, 0.0)
+                else:
+                    lf = float(sheet.cell_value(r, col_p_litros_fuel)) if sheet.cell_value(r, col_p_litros_fuel) != "" else 0.0
+                    vf = float(sheet.cell_value(r, col_p_valor_fuel)) if sheet.cell_value(r, col_p_valor_fuel) != "" else 0.0
+                    la = float(sheet.cell_value(r, col_p_litros_arla)) if sheet.cell_value(r, col_p_litros_arla) != "" else 0.0
+                    va = float(sheet.cell_value(r, col_p_valor_arla)) if sheet.cell_value(r, col_p_valor_arla) != "" else 0.0
+                    tl = float(sheet.cell_value(r, col_p_tot_litros)) if sheet.cell_value(r, col_p_tot_litros) != "" else 0.0
+                    tv = float(sheet.cell_value(r, col_p_tot_valor)) if sheet.cell_value(r, col_p_tot_valor) != "" else 0.0
+                    
+                total_p_litros_fuel += lf
+                total_p_valor_fuel += vf
+                total_p_litros_arla += la
+                total_p_valor_arla += va
+                total_p_tot_litros += tl
+                total_p_tot_valor += tv
+                
+            post_row_updates[posto_total_row] = {
+                col_p_litros_fuel: total_p_litros_fuel,
+                col_p_valor_fuel: total_p_valor_fuel,
+                col_p_litros_arla: total_p_litros_arla,
+                col_p_valor_arla: total_p_valor_arla,
+                col_p_tot_litros: total_p_tot_litros,
+                col_p_tot_valor: total_p_tot_valor
+            }
+
+    # 5. Encontrar célula Diferença para forçar 0.0
+    diff_row, diff_col = None, None
+    for r in range(sheet.nrows):
+        for c in range(min(30, sheet.ncols)):
+            val = str(sheet.cell_value(r, c)).strip()
+            if "Diferença (Consumo X Adquirido)" in val:
+                diff_row, diff_col = r, c
+                break
+        if diff_row is not None:
+            break
+            
+    diff_cell_zeros = False
+    if diff_row is not None:
+        curr_diff_litros = sheet.cell_value(diff_row + 2, diff_col)
+        curr_diff_valor = sheet.cell_value(diff_row + 2, diff_col + 1)
+        curr_diff_litros = float(curr_diff_litros) if curr_diff_litros != "" else 0.0
+        curr_diff_valor = float(curr_diff_valor) if curr_diff_valor != "" else 0.0
+        if abs(curr_diff_litros) > 0.01 or abs(curr_diff_valor) > 0.01:
+            diff_cell_zeros = True
+            correcoes_aplicadas.append(f"Células de diferença consumo x adquirido zeradas na planilha")
+            
+    if not placa_replacements and not odo_swaps and not fuel_corrections and not post_row_updates and not diff_cell_zeros:
+        print(f"   {GREEN}✔ Nenhuma correção necessária neste arquivo.{RESET}")
         return False
         
     # --- EFETUAR ALTERAÇÕES ---
@@ -290,7 +598,6 @@ def processar_correcoes_arquivo(caminho_arq, mes_ano_cod):
         
     # Aplicar swaps de odômetros
     for r1, r2, p1, p2 in odo_swaps:
-        # Ler valores originais das células
         ini1 = sheet.cell_value(r1, col_km_ini)
         fim1 = sheet.cell_value(r1, col_km_fim)
         tot1 = sheet.cell_value(r1, col_km_tot)
@@ -299,10 +606,8 @@ def processar_correcoes_arquivo(caminho_arq, mes_ano_cod):
         fim2 = sheet.cell_value(r2, col_km_fim)
         tot2 = sheet.cell_value(r2, col_km_tot)
         
-        # Escrever valores trocados
         w_sheet.write(r1, col_km_ini, ini2)
         w_sheet.write(r1, col_km_fim, fim2)
-        # Recalcular Total KM (Fim - Inicio)
         try:
             w_sheet.write(r1, col_km_tot, float(fim2) - float(ini2))
         except:
@@ -314,6 +619,20 @@ def processar_correcoes_arquivo(caminho_arq, mes_ano_cod):
             w_sheet.write(r2, col_km_tot, float(fim1) - float(ini1))
         except:
             w_sheet.write(r2, col_km_tot, tot1)
+            
+    # Aplicar correções de combustível e arla de veículos
+    for r, col, old_val, new_val in fuel_corrections:
+        w_sheet.write(r, col, new_val)
+        
+    # Aplicar atualizações da tabela de postos
+    for r, updates in post_row_updates.items():
+        for c, val in updates.items():
+            w_sheet.write(r, c, val)
+            
+    # Forçar células de diferença a zero
+    if diff_row is not None:
+        w_sheet.write(diff_row + 2, diff_col, 0.0)
+        w_sheet.write(diff_row + 2, diff_col + 1, 0.0)
             
     # Salvar o arquivo original
     try:
