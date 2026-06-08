@@ -365,6 +365,7 @@ def main():
         if "Zone.Identifier" not in a 
         and not os.path.basename(a).startswith("~$") 
         and not os.path.basename(a).startswith(".")
+        and not a.endswith(".bak")
     ]
     
     if not arquivos:

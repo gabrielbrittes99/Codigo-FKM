@@ -67,3 +67,4 @@ ajustes_placas.csv
 # Arquivos retornados para auditoria
 dados/retornados/*.xls
 dados/retornados/*.xlsx
+dados/retornados/*.bak
