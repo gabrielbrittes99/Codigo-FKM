@@ -212,6 +212,32 @@ def auditar_arquivo(caminho_fkm, mes_ano_fkm):
                 avisos.append(f"Placa no FKM que não está na frota oficial de {branch_name}: '{extra}' (pode ser veículo novo ou emprestado)")
                 
     # --- B. Validação de Combustível e Arla ---
+    # Agrupar colunas por placa caso a mesma placa apareça em múltiplas linhas no FKM
+    df_fkm_grouped = df_fkm.groupby("Placa_Clean").agg(
+        Placa=("Placa", "first"),
+        Km_Inicial=("Km Inicial", "min"),
+        Km_Final=("Km Final", "max"),
+        Total_de_Km=("Total de Km", "sum"),
+        Litros_Comb=("Litros Comb.", "sum"),
+        Valor_Comb=("Valor Comb.", "sum"),
+        Arla=("Arla", "sum"),
+        Lataria_e_Pintura=("Lataria e Pintura", "sum"),
+        Manutencao_em_Geral=("Manutenção em Geral", "sum"),
+        Rodas_Pneus=("Rodas / Pneus", "sum")
+    ).reset_index()
+    
+    df_fkm_grouped["Km Inicial"] = df_fkm_grouped["Km_Inicial"]
+    df_fkm_grouped["Km Final"] = df_fkm_grouped["Km_Final"]
+    df_fkm_grouped["Total de Km"] = df_fkm_grouped["Total_de_Km"]
+    df_fkm_grouped["Litros Comb."] = df_fkm_grouped["Litros_Comb"]
+    df_fkm_grouped["Valor Comb."] = df_fkm_grouped["Valor_Comb"]
+    df_fkm_grouped["Lataria e Pintura"] = df_fkm_grouped["Lataria_e_Pintura"]
+    df_fkm_grouped["Manutenção em Geral"] = df_fkm_grouped["Manutencao_em_Geral"]
+    df_fkm_grouped["Rodas / Pneus"] = df_fkm_grouped["Rodas_Pneus"]
+    
+    # Substituir df_fkm pela versão agrupada para as validações seguintes
+    df_fkm = df_fkm_grouped
+
     # Filtrar Arla em combustível oficial
     df_comb_arla = df_comb[df_comb["Combustivel"].str.contains("Arla", case=False, na=False)].groupby("Placa_Clean").agg(
         Arla_Liters_Source=("Litragem", "sum"),
@@ -333,12 +359,19 @@ def main():
         return
         
     arquivos = glob.glob(os.path.join(pasta_retorno, "*.xls*"))
+    # Filtrar arquivos temporários ou metadados de sistema (como Zone.Identifier ou arquivos temporários do Office)
+    arquivos = [
+        a for a in arquivos 
+        if "Zone.Identifier" not in a 
+        and not os.path.basename(a).startswith("~$") 
+        and not os.path.basename(a).startswith(".")
+    ]
     
     if not arquivos:
         print(f"⚠️  Nenhum arquivo FKM (.xls ou .xlsx) localizado na pasta dados/retornados/.")
         return
         
-    print(f"📂 Encontrados {len(arquivos)} arquivos para validar.")
+    print(f"📂 Encontrados {len(arquivos)} arquivos válidos para validar.")
     
     mes_ano_cod = f"{config.obter_numero_mes()}{config.ANO[-2:]}" # Ex: 0526
     

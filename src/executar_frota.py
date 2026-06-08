@@ -45,34 +45,123 @@ def obter_conexao_bluefleet():
 
 
 def extrair_frota_bluefleet():
-    print("🔄 Conectando ao Bluefleet para extrair dados da frota...")
+    import calendar
+    print(f"🔄 Conectando ao Bluefleet para extrair dados históricos da frota para {config.MES}/{config.ANO}...")
     conn = obter_conexao_bluefleet()
-    query = """
+    
+    # 1. Carregar todos os veículos ativos
+    query_vei = """
     SELECT
         Placa,
         Modelo,
-        CASE
-            WHEN Placa IN ('UBN-9E24','UBN-9E26','UBK-4B56','UBR-9B03','TAV-9E95','UBN-9E25','UBR-9B07','SFD-4I64','SFG-4I64','UBR-9B05') THEN 'GRITSCH - PET'
-            ELSE FilialOperacional
-        END AS FilialOperacional,
+        FilialOperacional,
         SituacaoVeiculo
     FROM
         dbo.Veiculos
     WHERE
-        SituacaoVeiculo <> 'Vendido'
-        AND (FilialOperacional LIKE '%GRIT%' OR Placa IN ('UBN-9E24','UBN-9E26','UBK-4B56','UBR-9B03','TAV-9E95','UBN-9E25','UBR-9B07','SFD-4I64','SFG-4I64','UBR-9B05'))
-    ORDER BY
-        FilialOperacional,
-        Placa;
+        SituacaoVeiculo <> 'Vendido';
     """
-    df = pd.read_sql(query, conn)
+    df_vei = pd.read_sql(query_vei, conn)
+    
+    # 2. Carregar todas as movimentações
+    query_mov = """
+    SELECT 
+        Data_da_movimentação, 
+        Placa, 
+        Unidade_de_Origem, 
+        Unidade_de_Destino
+    FROM 
+        dbo.Movimentos
+    ORDER BY 
+        Placa, Data_da_movimentação;
+    """
+    df_mov = pd.read_sql(query_mov, conn)
     conn.close()
-
-    if "Placa" in df.columns:
-        df["Placa"] = df["Placa"].astype(str).str.replace("-", "", regex=False).str.strip().str.upper()
-
-    print(f"✅ Extração concluída. Total de veículos encontrados: {len(df)}")
-    return df
+    
+    # Normalizar placas para correspondência exata
+    df_vei["Placa_Clean"] = df_vei["Placa"].astype(str).str.replace("-", "", regex=False).str.strip().str.upper()
+    df_mov["Placa_Clean"] = df_mov["Placa"].astype(str).str.replace("-", "", regex=False).str.strip().str.upper()
+    df_mov["Data_da_movimentação"] = pd.to_datetime(df_mov["Data_da_movimentação"])
+    
+    # Determinar período do fechamento
+    mes_num = int(config.obter_numero_mes())
+    ano = int(config.ANO)
+    _, ultimo_dia = calendar.monthrange(ano, mes_num)
+    start_date = pd.Timestamp(year=ano, month=mes_num, day=1, hour=0, minute=0, second=0)
+    end_date = pd.Timestamp(year=ano, month=mes_num, day=ultimo_dia, hour=23, minute=59, second=59)
+    
+    print(f"   Período considerado: {start_date} até {end_date}")
+    
+    # Mapear movimentos por placa
+    movs_by_plate = {p: g.sort_values("Data_da_movimentação") for p, g in df_mov.groupby("Placa_Clean")}
+    
+    # Exceções PET
+    excecoes_pet = ['UBN9E24','UBN9E26','UBK4B56','UBR9B03','TAV9E95','UBN9E25','UBR9B07','SFD4I64','SFG4I64','UBR9B05']
+    
+    historical_allocations = []
+    
+    for _, vei in df_vei.iterrows():
+        placa = vei["Placa_Clean"]
+        modelo = vei["Modelo"]
+        situacao = vei["SituacaoVeiculo"]
+        current_filial = vei["FilialOperacional"]
+        
+        # Obter movimentos da placa
+        p_movs = movs_by_plate.get(placa)
+        
+        branches_in_month = set()
+        
+        if p_movs is None or p_movs.empty:
+            branches_in_month.add(current_filial)
+        else:
+            # A. Localização no início do mês
+            movs_before = p_movs[p_movs["Data_da_movimentação"] < start_date]
+            if not movs_before.empty:
+                initial_branch = movs_before.iloc[-1]["Unidade_de_Destino"]
+                branches_in_month.add(initial_branch)
+            else:
+                first_mov = p_movs.iloc[0]
+                branches_in_month.add(first_mov["Unidade_de_Origem"])
+                
+            # B. Movimentações durante o mês
+            movs_during = p_movs[(p_movs["Data_da_movimentação"] >= start_date) & (p_movs["Data_da_movimentação"] <= end_date)]
+            for _, mov in movs_during.iterrows():
+                branches_in_month.add(mov["Unidade_de_Origem"])
+                branches_in_month.add(mov["Unidade_de_Destino"])
+                
+            if not branches_in_month:
+                branches_in_month.add(current_filial)
+                
+        # Adicionar as alocações daquele mês
+        for b in branches_in_month:
+            if pd.isna(b):
+                continue
+                
+            # Tratar exceção da filial PET
+            filial_final = b
+            if placa in excecoes_pet:
+                filial_final = 'GRITSCH - PET'
+                
+            # Filtrar para manter apenas filiais da Gritsch ou PET
+            if "GRIT" in str(filial_final).upper() or filial_final == 'GRITSCH - PET':
+                historical_allocations.append({
+                    "Placa": vei["Placa"],
+                    "Modelo": modelo,
+                    "FilialOperacional": filial_final,
+                    "SituacaoVeiculo": situacao,
+                    "Placa_Clean": placa
+                })
+                
+    df_hist = pd.DataFrame(historical_allocations)
+    
+    # Remover duplicatas caso a normalização ou lógica gere registros idênticos
+    if not df_hist.empty:
+        df_hist = df_hist.drop_duplicates(subset=["Placa_Clean", "FilialOperacional"])
+        df_hist["Placa"] = df_hist["Placa"].astype(str).str.replace("-", "", regex=False).str.strip().str.upper()
+        df_hist = df_hist.drop(columns=["Placa_Clean"])
+    
+    print(f"✅ Extração concluída. Total de alocações de veículos no mês: {len(df_hist)}")
+    return df_hist
 
 
 def gerar_relatorio_frota(df_filial, filial, caminho_saida):
