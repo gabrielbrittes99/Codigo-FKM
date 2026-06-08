@@ -254,7 +254,15 @@ def processar_correcoes_arquivo(caminho_arq, mes_ano_cod):
                 ini2_oficial = oficiais_ini.get(p2, 0)
                 fim2_oficial = oficiais_fim.get(p2, 0)
                 
-                if (abs(ini1_fkm - ini2_oficial) <= 500 and abs(ini2_fkm - ini1_oficial) <= 500 and
+                # Só troca se a distância para os valores oficiais do OUTRO veículo for menor
+                # do que a distância para os valores oficiais do PRÓPRIO veículo.
+                dist_propria_1 = abs(ini1_fkm - ini1_oficial)
+                dist_outra_1 = abs(ini1_fkm - ini2_oficial)
+                dist_propria_2 = abs(ini2_fkm - ini2_oficial)
+                dist_outra_2 = abs(ini2_fkm - ini1_oficial)
+                
+                if (dist_outra_1 < dist_propria_1 and dist_outra_2 < dist_propria_2 and
+                    abs(ini1_fkm - ini2_oficial) <= 500 and abs(ini2_fkm - ini1_oficial) <= 500 and
                     ini1_fkm > 0 and ini2_fkm > 0 and ini1_oficial > 0 and ini2_oficial > 0):
                     
                     odo_swaps.append((row_by_plate[p1], row_by_plate[p2], p1, p2))
