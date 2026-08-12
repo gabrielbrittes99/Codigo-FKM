@@ -1,0 +1,239 @@
+# ============================================================
+# Conteúdo Editorial — Relatório Torre de Controle
+#
+# Este arquivo controla TODO o texto do relatório. Os números
+# vêm dos bancos; aqui você escreve a leitura, as observações e
+# as ações.
+#
+# ------------------------------------------------------------
+# COMO ESCREVER
+# ------------------------------------------------------------
+# 1) Qualquer texto aceita {placeholders} que são trocados pelos
+#    valores calculados. Exemplo:
+#       "O custo caiu {var_ckm}, de {b2_ckm} para {b3_ckm}."
+#    vira:
+#       "O custo caiu 7.1%, de R$ 1.249 para R$ 1.161."
+#
+# 2) Toda página tem um campo `observacoes:` — é o seu espaço
+#    para comentar aquela página (o que mudou, o que foi feito,
+#    o que vamos fazer). Se ficar vazio, o box nem aparece.
+#
+# 3) A última página (`pagina_14_observacoes_gerais`) é o espaço
+#    livre para melhorias, ações em andamento e pontos de atenção.
+#
+# 4) `habilitada: false` remove a página do PDF.
+#
+# ------------------------------------------------------------
+# PLACEHOLDERS DISPONÍVEIS
+# ------------------------------------------------------------
+# Período:    {periodo} {ano} {mes_inicial} {mes_final}
+#             {b1_meses} {b2_meses} {b3_meses}
+#             {mes_b3_inicial} {mes_b3_final}
+#
+# Por bimestre (troque b1_ por b2_ ou b3_):
+#   {b1_total} {b1_manutencao} {b1_combustivel} {b1_pedagio}
+#   {b1_manutencao_k}  → em milhares (R$ 1468K)
+#   {b1_km} {b1_litros} {b1_consumo} {b1_diesel} {b1_passagens}
+#   {b1_ckm}            → custo/km total
+#   {b1_ckm_combustivel} {b1_ckm_manutencao}
+#
+# Variações B3 vs B2:
+#   {var_total} {var_ckm} {var_manutencao} {var_combustivel}
+#   {var_pedagio} {var_km} {var_diesel} {var_ckm_manutencao}
+#
+# Variações B3 vs B1 (semestre inteiro):
+#   {var_total_b1} {var_ckm_b1} {var_km_b1} {var_diesel_b1}
+#   {var_ckm_manutencao_b1}
+#
+# Toda variação existe em duas formas:
+#   {var_ckm}        → 6.6%    (sem sinal, para "caiu 6.6%")
+#   {var_ckm_sinal}  → -6.6%   (com sinal, para valores entre parênteses)
+#
+# Pedágio:    {delta_pedagio} {delta_passagens}
+#             {top_concessionarias} {top_pracas}
+# ============================================================
+
+relatorio:
+  titulo: "Torre de Controle"
+  subtitulo: "Custos Operacionais · Comparativo Bimestral"
+  periodo: "Jan-Jun 2026"
+  empresa: "Grupo Gritsch"
+  rodape: "Transportes Gritsch · Torre de Controle · BlueFleet · TruckPag"
+  data_geracao: "Julho 2026"
+
+# ------------------------------------------------------------
+pagina_1_visao_executiva:
+  habilitada: true
+  titulo: "Visão executiva: Bimestre 2 vs Bimestre 3"
+  titulo_grafico: "Evolução mensal: {periodo}"
+
+# ------------------------------------------------------------
+pagina_2_evolucao_custo_km:
+  habilitada: true
+  titulo: "Evolução do custo por km"
+  subtitulo: "Leitura geral"
+  paragrafos:
+    - titulo: "Custo por km caiu {var_ckm} de B2 para B3."
+      texto: "B2: {b2_ckm}/km. B3: {b3_ckm}/km. Em valor absoluto o total também recuou, de {b2_total} para {b3_total}."
+    - titulo: "Diesel recuou depois do pico de março e abril."
+      texto: "Preço médio do Diesel S10 caiu de {b2_diesel}/L (média B2) para {b3_diesel}/L (média B3)."
+    - titulo: "Manutenção segue em queda constante."
+      texto: "B2: {b2_manutencao_k}. B3: {b3_manutencao_k}. Custo por km caiu de {b2_ckm_manutencao} para {b3_ckm_manutencao}/km."
+    - titulo: "Pedágio é o único pilar em alta, puxado por mais volume operacional e mais passagens."
+      texto: "B2: {b2_pedagio}. B3: {b3_pedagio}, com aumento de {delta_passagens} passagens no período."
+  observacoes: []
+
+# ------------------------------------------------------------
+pagina_3_indicadores_operacionais:
+  habilitada: true
+  titulo: "Custo por quilômetro: B2 ({b2_meses}) vs B3 ({b3_meses})"
+  subtitulo: "Indicadores operacionais"
+  titulo_diesel: "Preço do Diesel S10 em 6 meses"
+  texto_diesel: "O Diesel S10 vinha em alta desde o reajuste da Petrobras em março, mas começou a recuar em maio e junho. Preço médio caiu de {b2_diesel}/L (B2) para {b3_diesel}/L (B3)."
+  observacoes: []
+
+# ------------------------------------------------------------
+pagina_4_manutencao:
+  habilitada: true
+  titulo: "Manutenção por natureza (B2 vs B3)"
+  titulo_filiais: "Manutenção: Top 10 filiais (B3)"
+  observacoes: []
+
+# ------------------------------------------------------------
+pagina_5_combustivel:
+  habilitada: true
+  titulo: "Combustível por tipo (B2 vs B3)"
+  subtitulo: "Gestão de abastecimento e condução"
+  topicos:
+    - titulo: "Monitoramento ativo de preços por região."
+      texto: "Acompanhamento contínuo dos postos com melhor preço de Diesel S10 por rota, priorizando os credenciados TruckPag."
+    - titulo: "Comparação sistemática com a referência ANP."
+      texto: "Comparamos o preço praticado pelos postos credenciados com a referência ANP da cidade e do posto, buscando negociar valores sempre abaixo dessa referência."
+    - titulo: "Renegociação de tags e combustível com redes parceiras."
+      texto: "Negociação de valores de combustível com a Rede Sim e a Rede Galo, e de tags com a TruckPag, seguindo em andamento."
+    - titulo: "Controle de consumo via rastreadores e FKM Digital."
+      texto: "Cobrança de motoristas com consumo fora do padrão. FKM Digital seguindo para 100% de cobertura dos postos."
+    - titulo: "Relatórios diários e semanais de excesso de velocidade."
+      texto: "Com o acompanhamento diário e semanal dos excessos de velocidade, temos conseguido melhorar a média dos veículos, reduzindo multas e evitando problemas relacionados a excesso de velocidade."
+  observacoes: []
+
+# ------------------------------------------------------------
+pagina_6_pedagio:
+  habilitada: true
+  titulo: "Pedágio: evolução mensal ({mes_inicial} a {mes_final})"
+  texto_analise: "O pedágio cresceu {var_pedagio} de B2 para B3 ({b2_pedagio} para {b3_pedagio}). O aumento acompanha o volume, com +{delta_passagens} passagens no período. O detalhamento por praça está na próxima página."
+  observacoes: []
+
+# ------------------------------------------------------------
+pagina_7_pedagio_detalhe:
+  habilitada: true
+  titulo: "Praças e concessionárias com maior gasto (B3)"
+  texto_concessionarias: "{top_concessionarias} concentram o maior gasto do bimestre em valor, refletindo tanto o volume de passagens quanto as tarifas das rotas."
+  titulo_pracas: "Praças com maior aumento no número de passagens ({mes_b3_inicial} → {mes_b3_final})"
+  texto_pracas: "As praças com maior aumento no número de passagens de {mes_b3_inicial} para {mes_b3_final} foram: {top_pracas}."
+  observacoes: []
+
+# ------------------------------------------------------------
+pagina_8_custo_km_filial:
+  habilitada: true
+  titulo: "Custo por km: combustível por filial (B3), do mais caro ao mais barato"
+  # Faixas de cor do gráfico (R$/km de combustível)
+  limite_alto: 1.00
+  limite_baixo: 0.65
+  observacoes: []
+
+# ------------------------------------------------------------
+pagina_9_custo_km_detalhado:
+  habilitada: true
+  titulo: "Custo por km por filial: detalhamento (B3 vs B2)"
+  observacoes: []
+
+# ------------------------------------------------------------
+pagina_10_hodometro_manutencao:
+  habilitada: true
+  titulo: "Hodômetro vs custo de manutenção: Top 20 placas (B3)"
+  corte_hodometro: 200000
+  texto_analise: "Veículos com maior quilometragem e maior idade concentram os maiores custos de manutenção. O custo começa a subir de forma mais acentuada a partir da faixa de 200 mil km rodados (linha tracejada), ponto a partir do qual vale reforçar o acompanhamento preventivo."
+  observacoes: []
+
+# ------------------------------------------------------------
+pagina_11_resumo_semestre:
+  habilitada: true
+  titulo: "Resumo: seis meses ({periodo})"
+  observacoes: []
+
+# ------------------------------------------------------------
+pagina_12_fechamento:
+  habilitada: true
+  titulo: "Fechamento: o que os seis meses mostram"
+  subtitulo: "B1 ({b1_meses}) vs B3 ({b3_meses}): início e fim do semestre"
+  titulo_analise: "A leitura completa"
+  texto_analise: >-
+    Boa parte da melhora de B2 para B3 é explicada por rodarmos menos km e pelo diesel ter
+    recuado depois do pico de março, o que já era esperado. O dado mais revelador aparece
+    quando olhamos para o semestre inteiro. Entre B1 e B3, o diesel está {var_diesel_b1} mais
+    caro e a frota rodou {var_km_b1} mais km. Ainda assim, o custo por km total ficou
+    praticamente estável ({var_ckm_b1_sinal}). Isso não é acaso. É reflexo direto da queda
+    estrutural na manutenção por km ({var_ckm_manutencao_b1_sinal} entre B1 e B3), fruto da
+    centralização de
+    serviços, das oficinas fixas por filial e da renovação de frota que vêm sendo tocadas ao
+    longo do semestre. Em resumo, mesmo operando em um cenário de combustível mais caro e mais
+    quilometragem rodada, a Torre de Controle conseguiu segurar o custo por km no mesmo patamar
+    de seis meses atrás. Isso representa uma frota genuinamente mais eficiente, não apenas um
+    efeito de mercado favorável.
+  observacoes: []
+
+# ------------------------------------------------------------
+pagina_13_proximos_passos:
+  habilitada: true
+  titulo: "Próximos passos"
+  itens:
+    - titulo: "Renegociação de tags e combustível."
+      texto: "Continuar as negociações com a TruckPag, a Rede Sim e a Rede Galo, buscando manter os valores sempre abaixo da referência ANP."
+    - titulo: "FKM Digital."
+      texto: "Finalizar o credenciamento dos postos restantes para alcançar 100% de cobertura no controle digital de abastecimento."
+    - titulo: "Controle de velocidade."
+      texto: "Intensificar o acompanhamento via rastreadores e os relatórios diários e semanais de excesso de velocidade, reduzindo multas e melhorando a média dos veículos."
+    - titulo: "Renovação de frota."
+      texto: "Manter o ritmo de renovação nos veículos acima de 200 mil km, priorizando os que concentram maior custo de manutenção."
+    - titulo: "Compra de pneus."
+      texto: "Melhorar as condições de compra de pneus da frota."
+    - titulo: "Cuidados com veículos novos."
+      texto: "Instruir gestores e responsáveis sobre os cuidados que veículos novos precisam ter, como o uso de aditivos nas vans para evitar problemas de bomba causados por diesel de qualidade ruim."
+    - titulo: "Manutenção sob aprovação da Torre."
+      texto: "Ajustar os processos para que as manutenções só sejam realizadas após aprovação da Torre, sem interferir na disponibilidade do veículo para o roteiro."
+    - titulo: "Manutenção preventiva em problemas crônicos."
+      texto: "Antecipar manutenções preventivas nos problemas já identificados como crônicos, reduzindo a necessidade de manutenções corretivas."
+  observacoes: []
+
+# ------------------------------------------------------------
+# ESPAÇO LIVRE DA TORRE
+# Página final para registrar melhorias, ações e pontos de atenção.
+# Apague os itens de exemplo e escreva os seus. Blocos ou itens
+# vazios simplesmente não são impressos.
+# Para tirar a página do relatório: habilitada: false
+# ------------------------------------------------------------
+pagina_14_observacoes_gerais:
+  habilitada: true
+  titulo: "Observações da Torre de Controle"
+  blocos:
+    - titulo: "O que melhoramos no período"
+      itens:
+        - titulo: "Centralização das manutenções."
+          texto: "Descreva aqui o ganho obtido, com número sempre que possível. Ex.: manutenção por km caiu {var_ckm_manutencao} de B2 para B3."
+        - titulo: ""
+          texto: ""
+
+    - titulo: "Ações em andamento"
+      itens:
+        - titulo: "Ação, responsável e prazo."
+          texto: "Use uma linha por ação. Ex.: renegociação da tag TruckPag — Torre de Controle — fechamento previsto para o próximo bimestre."
+        - titulo: ""
+          texto: ""
+
+    - titulo: "Pontos de atenção"
+      itens:
+        - titulo: "Filiais fora da curva."
+          texto: "Registre aqui as filiais, placas ou praças que precisam de acompanhamento e o encaminhamento dado."
+        - titulo: ""
+          texto: ""

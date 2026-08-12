@@ -12,24 +12,69 @@ import numpy as np
 import pandas as pd
 
 # Exceções forçadas para filiais específicas (centralizado)
-# Placas que devem SEMPRE ir para uma filial específica, independente da lógica temporal
+# Placas que devem SEMPRE ir para uma filial específica, independente da lógica temporal.
+# ATENÇÃO: ZERAR ESTE DICIONÁRIO A CADA NOVO FECHAMENTO MENSAL PARA EVITAR QUE REGRAS
+# ANTIGAS AFETEM OS DADOS DO MÊS ATUAL!
 EXCECOES_FORCADAS = {
-    # Exceção para placas da filial GRITSCH - PET que ainda não existe no sistema
-    "UBN9E24": "GRITSCH - PET",
-    "UBN9E26": "GRITSCH - PET",
-    "UBK4B56": "GRITSCH - PET",
-    "UBR9B03": "GRITSCH - PET",
-    "TAV9E95": "GRITSCH - PET",
-    "UBN9E25": "GRITSCH - PET",
-    "UBR9B07": "GRITSCH - PET",
-    "SFG4I64": "GRITSCH - PET",
-    "SFD4I64": "GRITSCH - PET",
-    "UBR9B05": "GRITSCH - PET",
-    # Placas coringas para veículos novos (sem placa/chassi)
-    "TBI2068": "GRITSCH - MATRIZ",
-    "TBI2067": "GRITSCH - MATRIZ",
-    "TAX5J72": "GRITSCH - LDB",
-    "SFL-1E4": "GRITSCH - PMW",
+    "SFK1E50": "GRITSCH - POA",  # Julho/2026 - Ajuste manual
+    "SDW8B50": "GRITSCH - RDN",  # Reatribuição / Rateio para Rondonópolis
+    "RHE1F56": "GRITSCH - CWB (BASE)",  # Julho/2026 - Abastecimentos para CWB BASE
+    "SEF8G22": "GRITSCH - CWB (BASE)",  # Julho/2026 - Abastecimentos para CWB BASE
+    "RHS3G78": "GRITSCH - CWB (BASE)",  # Julho/2026 - Combustível para CWB BASE
+    "SFG4I64": "GRITSCH - PET",  # Julho/2026 - Pelotas
+    "TAN9C60": "GRITSCH - PET",  # Julho/2026 - Pelotas
+    "TAV9E95": "GRITSCH - PET",  # Julho/2026 - Pelotas
+    "UBK4B56": "GRITSCH - PET",  # Julho/2026 - Pelotas
+    "UBN9E24": "GRITSCH - PET",  # Julho/2026 - Pelotas
+    "UBN9E25": "GRITSCH - PET",  # Julho/2026 - Pelotas
+    "UBN9E26": "GRITSCH - PET",  # Julho/2026 - Pelotas
+    "UBR9B03": "GRITSCH - PET",  # Julho/2026 - Pelotas
+    "UBR9B05": "GRITSCH - PET",  # Julho/2026 - Pelotas
+    "UBR9B07": "GRITSCH - PET",  # Julho/2026 - Pelotas
+    "TBJ8E28": "GRITSCH - GOI",  # Julho/2026 - Goiânia
+    "SDU9F60": "GRITSCH - MATRIZ",  # Julho/2026 - Matriz
+    "TBK1J46": "GRITSCH - MATRIZ",  # Julho/2026 - Matriz
+    "SEE9I31": "REFERÊNCIA SINOP",   # Mudar para REFERÊNCIA SINOP e sair de Gritsch Sinop
+    "SEP8G07": "REFERÊNCIA SINOP",   # Mudar para REFERÊNCIA SINOP e sair de Gritsch Sinop
+    "SFL6I25": "GRITSCH - BSB",     # Mapeamento Julho/2026 - Brasília
+    "TAY6D07": "GRITSCH - BSB",     # Mapeamento Julho/2026 - Brasília
+    "SFI8F40": "GRITSCH - GOI",     # Julho/2026 - Ajuste manual (remover de GPA)
+    "BEP1I25": "GRITSCH - CWB (BASE)", # Julho/2026 - Ajuste manual (remover de GPA)
+    "SFI4A35": "GRITSCH - MGA",     # Julho/2026 - Ajuste manual Maringá
+}
+
+# Exceções exclusivas para MANUTENÇÃO (ajusta a filial de manutenção das placas)
+# ATENÇÃO: ZERAR ESTE DICIONÁRIO A CADA NOVO FECHAMENTO MENSAL!
+EXCECOES_MANUTENCAO = {
+    "RHS3G78": "GRITSCH - PBC",  # Julho/2026 - Manutenção para Pato Branco
+    "SDW8B50": "GRITSCH - MATRIZ",  # Julho/2026 - Manutenção para Matriz (abastecimento permanece RDN)
+    "SFD5C29": "GRITSCH - CWB (BASE)", # Julho/2026 - Manutenção para CWB (BASE)
+}
+
+# Placas excluídas da frota (sinistrados, indenizados, baixados, veículos para venda / desmobilizados)
+PLACAS_EXCLUIDAS = {
+    "SEC7A68",
+    "SDU9F70",
+    "ASU8677",
+    "SDU9F84",
+    "SDU9F94",
+    "SDU9G06",
+    "SEP6E12",
+    "SEP6E23",
+    "SEP6E24",
+    "SEP6E35",
+}
+
+# Unidades do BlueFleet que não pertencem ao FKM Gritsch
+# Veículos nessas unidades são excluídos do fechamento
+UNIDADES_NAO_OPERACIONAIS = {
+    "VEÍCULOS PARA VENDA",
+    "VEÍCULOS VENDIDOS",
+    "VEÍCULOS ROUBADOS",
+    "VEÍCULOS PARTICULARES",
+    "VEÍCULOS A DEFINIR",
+    "VEÍCULOS A DEFINIR SP",
+    "X FILIAL TESTE",
 }
 
 
@@ -57,11 +102,6 @@ if os.path.exists(arquivo_ajustes):
 # Exceções por ID de Transação (Prioridade Máxima)
 # IDs que devem ser vinculados a filiais específicas independente de placa ou data
 EXCECOES_TRANSACOES = {
-    "21752427": "GRITSCH - CGB",
-    "21583586": "GRITSCH - CGB",
-    "21560500": "GRITSCH - CGB",
-    "21432518": "GRITSCH - CGB",
-    "21359133": "GRITSCH - CGB",
 }
 
 
@@ -148,6 +188,12 @@ def criar_mapa_filiais(caminho_manutencao):
         df_manut["FILIAL"] = df_manut["FILIAL"].apply(normalizar_filial)
         print("🔄 Filiais normalizadas (CWB ECT → CWB BASE, RATEIO GRI → MATRIZ)")
 
+        # Aplicar exceções de manutenção
+        for placa_manut, filial_manut in EXCECOES_MANUTENCAO.items():
+            mask_manut = df_manut["Placa_Clean"] == placa_manut
+            if mask_manut.sum() > 0:
+                df_manut.loc[mask_manut, "FILIAL"] = filial_manut
+
         # Remover placas vazias ou inválidas
         df_manut = df_manut[df_manut["Placa_Clean"].str.len() > 0]
         df_manut = df_manut[df_manut["Placa_Clean"] != "NAN"]
@@ -204,6 +250,155 @@ def criar_mapa_filiais(caminho_manutencao):
         return {}
 
 
+def carregar_movimentacoes_banco():
+    """Retorna o DataFrame de movimentos e veículos ativos do Bluefleet."""
+    import os
+
+    import pyodbc
+
+    host = os.getenv("DB_HOST")
+    db = os.getenv("DB_NAME")
+    user = os.getenv("DB_USER")
+    pwd = os.getenv("DB_PASSWORD")
+
+    if not all([host, db, user, pwd]):
+        raise EnvironmentError(
+            "Variáveis de ambiente do BlueFleet incompletas. "
+            "Configure DB_HOST, DB_NAME, DB_USER e DB_PASSWORD no arquivo .env"
+        )
+
+    conn_str = (
+        f"DRIVER={{ODBC Driver 18 for SQL Server}};"
+        f"SERVER={host},1433;"
+        f"DATABASE={db};"
+        f"UID={user};"
+        f"PWD={pwd};"
+        f"TrustServerCertificate=yes;"
+        f"Connection Timeout=30;"
+    )
+
+    conn = pyodbc.connect(conn_str)
+
+    query_mov = """
+    SELECT
+        Data_da_movimentação,
+        Placa,
+        Unidade_de_Origem,
+        Unidade_de_Destino
+    FROM
+        dbo.Movimentos
+    WHERE
+        Unidade_movimentada = 'OPERAÇÃO'
+    ORDER BY
+        Placa, Data_da_movimentação;
+    """
+    df_mov = pd.read_sql(query_mov, conn)
+
+    query_vei = """
+    SELECT
+        Placa,
+        FilialOperacional
+    FROM
+        dbo.Veiculos;
+    """
+    df_vei = pd.read_sql(query_vei, conn)
+
+    conn.close()
+
+    return df_mov, df_vei
+
+
+def criar_mapa_movimentacoes_e_veiculos():
+    """
+    Lê os movimentos e veículos do banco de dados e cria um histórico de filiais para cada placa.
+    """
+    try:
+        print(
+            "🔍 Carregando dados de movimentação e cadastro de veículos do banco de dados..."
+        )
+        df_mov, df_vei = carregar_movimentacoes_banco()
+
+        # Normalizar placas e filiais
+        df_mov["Placa_Clean"] = (
+            df_mov["Placa"]
+            .astype(str)
+            .str.replace("-", "", regex=False)
+            .str.strip()
+            .str.upper()
+        )
+        df_vei["Placa_Clean"] = (
+            df_vei["Placa"]
+            .astype(str)
+            .str.replace("-", "", regex=False)
+            .str.strip()
+            .str.upper()
+        )
+
+        df_mov["Unidade_de_Origem"] = df_mov["Unidade_de_Origem"].apply(
+            normalizar_filial
+        )
+        df_mov["Unidade_de_Destino"] = df_mov["Unidade_de_Destino"].apply(
+            normalizar_filial
+        )
+        df_vei["FilialOperacional"] = df_vei["FilialOperacional"].apply(
+            normalizar_filial
+        )
+
+        df_mov["Data_da_movimentação"] = pd.to_datetime(df_mov["Data_da_movimentação"])
+
+        # Mapear veículos para filial operacional atual (como fallback)
+        fallback_veiculos = df_vei.set_index("Placa_Clean")[
+            "FilialOperacional"
+        ].to_dict()
+
+        # Agrupar movimentos por placa
+        mapa_movs = {}
+        for placa, group in df_mov.groupby("Placa_Clean"):
+            # Ordenar por data
+            group_sorted = group.sort_values("Data_da_movimentação")
+            movs_lista = []
+            for _, row in group_sorted.iterrows():
+                data = row["Data_da_movimentação"]
+                origem = row["Unidade_de_Origem"]
+                destino = row["Unidade_de_Destino"]
+                if pd.notna(destino):
+                    movs_lista.append((data, origem, destino))
+            if movs_lista:
+                mapa_movs[placa] = movs_lista
+
+        print(f"   ✅ Histórico de movimentações mapeado para {len(mapa_movs)} placas.")
+        return mapa_movs, fallback_veiculos
+
+    except Exception as e:
+        print(f"⚠️ Erro ao criar mapa de movimentações: {e}")
+        return {}, {}
+
+
+def buscar_filial_por_movimentacao(placa, data_comb, mapa_movs, fallback_veiculos):
+    """
+    Busca a filial onde o veículo estava na data de combustível com base nas movimentações.
+    """
+    if placa not in mapa_movs:
+        return fallback_veiculos.get(placa)
+
+    hist = mapa_movs[placa]
+
+    if pd.isna(data_comb):
+        return hist[-1][2]
+
+    melhor_destino = None
+    for data_mov, origem, destino in hist:
+        if data_mov <= data_comb:
+            melhor_destino = destino
+        else:
+            break
+
+    if melhor_destino is None:
+        melhor_destino = hist[0][1]
+
+    return melhor_destino
+
+
 def aplicar_filial_manutencao(
     df,
     historico_filiais,
@@ -214,19 +409,14 @@ def aplicar_filial_manutencao(
     coluna_id="Id transacao",
 ):
     """
-    Aplica a filial de manutenção ao DataFrame usando LÓGICA TEMPORAL.
+    Aplica a filial de manutenção ao DataFrame usando LÓGICA TEMPORAL e DE MOVIMENTAÇÕES.
 
     Para cada abastecimento:
-    1. Verifica exceções forçadas (EXCECOES_FORCADAS)
-    2. Busca no histórico temporal a manutenção mais recente ANTES do abastecimento
-    3. Usa a filial desse registro de manutenção
-    4. Se a filial for REFERÊNCIA → ignora (exceto TBU9D20)
-    5. Se não houver manutenção antes → mantém garagem original
-
-    Args:
-        df: DataFrame de combustível
-        historico_filiais: Dict {placa: [(data, filial), ...]} de criar_mapa_filiais
-        mapa_datas_manutencao: IGNORADO (mantido por compatibilidade)
+    1. Verifica exceções por ID de transação (EXCECOES_TRANSACOES)
+    2. Verifica exceções forçadas por placa (EXCECOES_FORCADAS)
+    3. Busca no histórico de movimentações (planilha de movimentos) a filial de destino na data do abastecimento
+    4. Caso não encontre movimentos, usa o histórico de manutenção
+    5. Se não houver histórico, mantém garagem original
     """
     # Normalizar placas
     df["Placa_Clean"] = (
@@ -249,40 +439,13 @@ def aplicar_filial_manutencao(
         "total": 0,
         "excecao_forcada": 0,
         "sem_historico": 0,
-        "referencia_ignorada": 0,
-        "referencia_excecao": 0,
+        "referencia_manteve_garagem": 0,
         "temporal_match": 0,
         "sem_data_fallback": 0,
     }
 
-    def buscar_filial_temporal(historico_placa, data_combustivel):
-        """Busca a filial da manutenção mais recente ANTES/NA data do abastecimento."""
-        if not historico_placa:
-            return None
-
-        # Sem data de combustível → usar a filial mais recente disponível
-        if pd.isna(data_combustivel):
-            for data, filial in reversed(historico_placa):
-                if pd.notna(data):
-                    return filial
-            return historico_placa[-1][1]
-
-        # Buscar a entrada mais recente com data <= data_combustivel
-        melhor_filial = None
-        for data, filial in historico_placa:
-            if pd.notna(data) and data <= data_combustivel:
-                melhor_filial = filial
-            elif pd.notna(data) and data > data_combustivel:
-                break
-
-        # Se não achou antes da data, usar a primeira entrada disponível
-        if melhor_filial is None:
-            for data, filial in historico_placa:
-                if pd.isna(data):
-                    return filial
-            melhor_filial = historico_placa[0][1]
-
-        return melhor_filial
+    # Carregar dados de movimentação e veículos ativos do banco de dados
+    mapa_movs, fallback_veiculos = criar_mapa_movimentacoes_e_veiculos()
 
     def determinar_filial(row):
         stats["total"] += 1
@@ -290,7 +453,6 @@ def aplicar_filial_manutencao(
         garagem_original = row[coluna_garagem]
 
         # PRIORIDADE 0: Exceções por ID de Transação (Robust Match)
-        # Tenta encontrar a coluna de ID dinamicamente
         id_col_real = (
             coluna_id
             if coluna_id in row.index
@@ -317,59 +479,86 @@ def aplicar_filial_manutencao(
         if id_col_real:
             val_raw = row[id_col_real]
             if pd.notna(val_raw):
-                # Converte float/num para string inteira (ex: 123.0 -> "123")
                 try:
                     id_trans = str(int(float(val_raw))).strip()
                 except:
                     id_trans = str(val_raw).split(".")[0].strip()
 
-                if id_trans in EXCECOES_TRANSACOES:
+        # Exceção específica para TAI9A24: Todos os custos vão para POA, EXCETO as 8 transações especificadas que seguem o fluxo normal
+        TRANSACOES_EXCLUIDAS_POA_TAI9A24 = {
+            "23954136", "23830001", "23780252", "23654547",
+            "23474206", "23332989", "23219488", "23175421"
+        }
+        if placa == "TAI9A24":
+            if id_col_real and pd.notna(row[id_col_real]):
+                try:
+                    id_t = str(int(float(row[id_col_real]))).strip()
+                except:
+                    id_t = str(row[id_col_real]).split(".")[0].strip()
+                if id_t in TRANSACOES_EXCLUIDAS_POA_TAI9A24:
+                    pass  # Não força POA, deixa seguir o fluxo normal/temporal abaixo
+                else:
                     stats["excecao_forcada"] += 1
-                    return EXCECOES_TRANSACOES[id_trans]
+                    return "GRITSCH - POA"
+            else:
+                stats["excecao_forcada"] += 1
+                return "GRITSCH - POA"
 
         # PRIORIDADE 1: Exceções forçadas por placa
         if placa in EXCECOES_FORCADAS:
             stats["excecao_forcada"] += 1
             return EXCECOES_FORCADAS[placa]
 
-        # NOVA LÓGICA: Exceção temporal para SFD3E82 após 17/03
+        # Regra temporal Sinop -> MATRIZ após 08/06/2026 para placas SFA6I75, SFA6I76, SFA6I77 e SFD9G67
+        PLACAS_SINOP_MATRIZ = {"SFA6I75", "SFA6I76", "SFA6I77", "SFD9G67"}
         data_comb = row.get("Data_Combustivel_Parsed", pd.NaT)
+        if placa in PLACAS_SINOP_MATRIZ and pd.notna(data_comb):
+            stats["excecao_forcada"] += 1
+            if data_comb > pd.Timestamp("2026-06-08"):
+                return "GRITSCH - MATRIZ"
+            else:
+                return "GRITSCH - SNO"
+
+        # Exceção temporal para SFD3E82 após 17/03
         if placa == "SFD3E82" and pd.notna(data_comb):
             if data_comb >= pd.Timestamp("2026-03-17"):
                 stats["excecao_forcada"] += 1
                 return "GRITSCH - MGA"
 
-        # Verificar histórico de manutenção
-        if placa not in historico_filiais:
-            stats["sem_historico"] += 1
-            return garagem_original
+        # PRIORIDADE 2: Tabela de movimentos do BlueFleet (dbo.Movimentos)
+        # Regra: o custo segue o veículo — usa a filial onde o veículo estava na data
+        filial_movimento = buscar_filial_por_movimentacao(
+            placa, data_comb, mapa_movs, fallback_veiculos
+        )
+        if filial_movimento and pd.notna(filial_movimento):
+            filial_mov_norm = normalizar_filial(filial_movimento)
+            if filial_mov_norm:
+                filial_upper = str(filial_mov_norm).upper()
+                if "REFER" in filial_upper:
+                    # Unidade de outra empresa do grupo → manter garagem TruckPag
+                    stats["referencia_manteve_garagem"] += 1
+                    return garagem_original
 
-        # Buscar filial temporal
-        data_comb = row.get("Data_Combustivel_Parsed", pd.NaT)
-        filial_encontrada = buscar_filial_temporal(historico_filiais[placa], data_comb)
+                # Exceção específica RHA3E79: o que era Cascavel (CSC) vai para CWB (BASE), Londrina (LDB) mantém Londrina
+                if placa == "RHA3E79" and ("CSC" in filial_upper or "CASCAVEL" in filial_upper):
+                    if pd.notna(data_comb):
+                        stats["temporal_match"] += 1
+                    else:
+                        stats["sem_data_fallback"] += 1
+                    return "GRITSCH - CWB (BASE)"
 
-        if filial_encontrada is None:
-            stats["sem_historico"] += 1
-            return garagem_original
+                if pd.notna(data_comb):
+                    stats["temporal_match"] += 1
+                else:
+                    stats["sem_data_fallback"] += 1
+                return filial_mov_norm
 
-        # Verificar se é REFERÊNCIA
-        filial_upper = str(filial_encontrada).upper()
-        if filial_upper.startswith("REFERÊNCIA") or filial_upper.startswith(
-            "REFERENCIA"
-        ):
-            if placa == PLACA_EXCECAO and "CURITIBA" in filial_upper:
-                stats["referencia_excecao"] += 1
-                return filial_encontrada
-            stats["referencia_ignorada"] += 1
-            return garagem_original
-
-        # Filial válida via lógica temporal
-        if pd.notna(data_comb):
-            stats["temporal_match"] += 1
-        else:
-            stats["sem_data_fallback"] += 1
-
-        return filial_encontrada
+        # Sem filial válida via movimentos → manter garagem original do TruckPag
+        stats["sem_historico"] += 1
+        garagem_norm = normalizar_filial(garagem_original)
+        if placa == "RHA3E79" and garagem_norm and ("CSC" in str(garagem_norm).upper() or "CASCAVEL" in str(garagem_norm).upper()):
+            return "GRITSCH - CWB (BASE)"
+        return garagem_original
 
     # Aplicar
     df["Filial_Final"] = df.apply(determinar_filial, axis=1)
@@ -391,18 +580,11 @@ def aplicar_filial_manutencao(
     print(
         f"   - {registros_realocados}/{total_registros} registros afetados ({registros_realocados / total_registros * 100:.1f}%)"
     )
-    print(f"\n📅 Lógica temporal aplicada:")
-    print(f"   - {stats['excecao_forcada']} registros: exceção forçada")
-    print(f"   - {stats['temporal_match']} registros: manutenção temporal usada")
-    print(f"   - {stats['sem_data_fallback']} registros: sem data (usou filial geral)")
-    print(f"\n⚙️  Outras decisões:")
-    print(f"   - {stats['sem_historico']} registros: sem histórico (manteve garagem)")
-    print(
-        f"   - {stats['referencia_ignorada']} registros: REFERÊNCIA ignorada (manteve garagem)"
-    )
-    if stats["referencia_excecao"] > 0:
-        print(
-            f"   - {stats['referencia_excecao']} registros: exceção TBU9D20 → REFERÊNCIA CURITIBA"
-        )
+    print(f"\n📅 Por movimentações (dbo.Movimentos):")
+    print(f"   - {stats['excecao_forcada']} registros: exceção forçada (manual)")
+    print(f"   - {stats['temporal_match']} registros: filial via movimentação")
+    print(f"   - {stats['sem_data_fallback']} registros: sem data (usou FilialOperacional)")
+    print(f"   - {stats['referencia_manteve_garagem']} registros: unidade REFERÊNCIA → manteve garagem TruckPag")
+    print(f"   - {stats['sem_historico']} registros: sem movimentação → manteve garagem TruckPag")
 
     return df

@@ -13,7 +13,7 @@ from openpyxl import load_workbook
 from openpyxl.styles import Alignment, Font, PatternFill
 
 from src import config
-from src.filial_mapping import normalizar_filial
+from src.filial_mapping import normalizar_filial, EXCECOES_FORCADAS, PLACAS_EXCLUIDAS
 
 load_dotenv()
 
@@ -54,6 +54,7 @@ def extrair_frota_bluefleet():
     SELECT
         Placa,
         Modelo,
+        montadora,
         FilialOperacional,
         SituacaoVeiculo
     FROM
@@ -63,21 +64,23 @@ def extrair_frota_bluefleet():
     """
     df_vei = pd.read_sql(query_vei, conn)
     
-    # 2. Carregar todas as movimentações
+    # 2. Carregar movimentações operacionais (transferências entre filiais)
     query_mov = """
-    SELECT 
-        Data_da_movimentação, 
-        Placa, 
-        Unidade_de_Origem, 
+    SELECT
+        Data_da_movimentação,
+        Placa,
+        Unidade_de_Origem,
         Unidade_de_Destino
-    FROM 
+    FROM
         dbo.Movimentos
-    ORDER BY 
+    WHERE
+        Unidade_movimentada = 'OPERAÇÃO'
+    ORDER BY
         Placa, Data_da_movimentação;
     """
     df_mov = pd.read_sql(query_mov, conn)
     conn.close()
-    
+
     # Normalizar placas para correspondência exata
     df_vei["Placa_Clean"] = df_vei["Placa"].astype(str).str.replace("-", "", regex=False).str.strip().str.upper()
     df_mov["Placa_Clean"] = df_mov["Placa"].astype(str).str.replace("-", "", regex=False).str.strip().str.upper()
@@ -95,62 +98,117 @@ def extrair_frota_bluefleet():
     # Mapear movimentos por placa
     movs_by_plate = {p: g.sort_values("Data_da_movimentação") for p, g in df_mov.groupby("Placa_Clean")}
     
-    # Exceções PET
-    excecoes_pet = ['UBN9E24','UBN9E26','UBK4B56','UBR9B03','TAV9E95','UBN9E25','UBR9B07','SFD4I64','SFG4I64','UBR9B05']
-    
     historical_allocations = []
-    
+
     for _, vei in df_vei.iterrows():
         placa = vei["Placa_Clean"]
         modelo = vei["Modelo"]
         situacao = vei["SituacaoVeiculo"]
         current_filial = vei["FilialOperacional"]
-        
-        # Obter movimentos da placa
+
+        # Ignorar placas excluídas (sinistrados, indenizados, baixados)
+        if placa in PLACAS_EXCLUIDAS:
+            continue
+
+        # PRIORIDADE 1: Verificar se a placa está nas exceções forçadas
+        if placa in EXCECOES_FORCADAS:
+            filial_forcada = EXCECOES_FORCADAS[placa]
+            # Normalizar nome da filial forçada
+            filial_forcada = normalizar_filial(filial_forcada)
+
+            # Adicionar apenas uma vez para a filial forçada
+            historical_allocations.append({
+                "Placa": vei["Placa"],
+                "Modelo": modelo,
+                "Montadora": vei.get("montadora", ""),
+                "FilialOperacional": filial_forcada,
+                "SituacaoVeiculo": situacao,
+                "Data_Transferencia": "Placa forçada (mapeamento manual)",
+                "Placa_Clean": placa
+            })
+            continue  # Pula a lógica normal de movimentações
+
+        # PRIORIDADE 2: Determinar filial(is) no período usando movimentações
         p_movs = movs_by_plate.get(placa)
-        
-        branches_in_month = set()
-        
+
+        # Resultado: lista de (filial, data_transferencia) onde o veículo esteve no mês
+        filiais_no_periodo = []
+
         if p_movs is None or p_movs.empty:
-            branches_in_month.add(current_filial)
+            # Sem movimentações de OPERAÇÃO no banco = veículo estável
+            filiais_no_periodo.append((current_filial, None))
         else:
-            # A. Localização no início do mês
-            movs_before = p_movs[p_movs["Data_da_movimentação"] < start_date]
-            if not movs_before.empty:
-                initial_branch = movs_before.iloc[-1]["Unidade_de_Destino"]
-                branches_in_month.add(initial_branch)
-            else:
-                first_mov = p_movs.iloc[0]
-                branches_in_month.add(first_mov["Unidade_de_Origem"])
-                
-            # B. Movimentações durante o mês
-            movs_during = p_movs[(p_movs["Data_da_movimentação"] >= start_date) & (p_movs["Data_da_movimentação"] <= end_date)]
-            for _, mov in movs_during.iterrows():
-                branches_in_month.add(mov["Unidade_de_Origem"])
-                branches_in_month.add(mov["Unidade_de_Destino"])
-                
-            if not branches_in_month:
-                branches_in_month.add(current_filial)
-                
-        # Adicionar as alocações daquele mês
-        for b in branches_in_month:
-            if pd.isna(b):
+            # Separar movimentações por período
+            movs_antes = p_movs[p_movs["Data_da_movimentação"] < start_date]
+            movs_durante = p_movs[(p_movs["Data_da_movimentação"] >= start_date) & (p_movs["Data_da_movimentação"] <= end_date)]
+            movs_depois = p_movs[p_movs["Data_da_movimentação"] > end_date]
+
+            if not movs_antes.empty:
+                # Tem movimentações ANTES do mês: veículo estava no destino da última
+                filiais_no_periodo.append((
+                    movs_antes.iloc[-1]["Unidade_de_Destino"],
+                    movs_antes.iloc[-1]["Data_da_movimentação"]
+                ))
+            elif not movs_durante.empty:
+                # Sem movimentações antes, mas tem durante: veículo veio da origem
+                filiais_no_periodo.append((
+                    movs_durante.iloc[0]["Unidade_de_Origem"],
+                    None
+                ))
+            elif not movs_depois.empty:
+                # Só tem movimentações DEPOIS do período
+                # Veículo estava na ORIGEM da primeira movimentação futura
+                filiais_no_periodo.append((
+                    movs_depois.iloc[0]["Unidade_de_Origem"],
+                    None
+                ))
+
+            # Adicionar destinos de movimentações DURANTE o mês
+            if not movs_durante.empty:
+                movs_durante_copy = movs_durante.copy()
+                movs_durante_copy["Data_Dia"] = movs_durante_copy["Data_da_movimentação"].dt.date
+                for _, group in movs_durante_copy.groupby("Data_Dia"):
+                    group_sorted = group.sort_values("Data_da_movimentação")
+                    filiais_no_periodo.append((
+                        group_sorted.iloc[-1]["Unidade_de_Destino"],
+                        group_sorted.iloc[-1]["Data_da_movimentação"]
+                    ))
+
+        # Adicionar alocações (deduplicar por filial)
+        filiais_vistas = set()
+        alguma_grit_encontrada = False
+        for filial, data_transf in filiais_no_periodo:
+            if pd.isna(filial):
                 continue
-                
-            # Tratar exceção da filial PET
-            filial_final = b
-            if placa in excecoes_pet:
-                filial_final = 'GRITSCH - PET'
-                
-            # Filtrar para manter apenas filiais da Gritsch ou PET
-            if "GRIT" in str(filial_final).upper() or filial_final == 'GRITSCH - PET':
+            filial_str = str(filial)
+            if filial_str in filiais_vistas:
+                continue
+            filiais_vistas.add(filial_str)
+
+            if "GRIT" in filial_str.upper():
+                alguma_grit_encontrada = True
                 historical_allocations.append({
                     "Placa": vei["Placa"],
                     "Modelo": modelo,
-                    "FilialOperacional": filial_final,
+                    "Montadora": vei.get("montadora", ""),
+                    "FilialOperacional": filial_str,
                     "SituacaoVeiculo": situacao,
+                    "Data_Transferencia": data_transf.strftime("%d/%m/%Y") if data_transf is not None else "Sem transferência no período",
                     "Placa_Clean": placa
                 })
+
+        # Fallback: se nenhuma filial GRITSCH foi encontrada pelas movimentações,
+        # usar a FilialOperacional atual do cadastro de veículos
+        if not alguma_grit_encontrada and "GRIT" in str(current_filial).upper():
+            historical_allocations.append({
+                "Placa": vei["Placa"],
+                "Modelo": modelo,
+                "Montadora": vei.get("montadora", ""),
+                "FilialOperacional": current_filial,
+                "SituacaoVeiculo": situacao,
+                "Data_Transferencia": "Sem transferência no período",
+                "Placa_Clean": placa
+            })
                 
     df_hist = pd.DataFrame(historical_allocations)
     
@@ -206,8 +264,10 @@ def gerar_relatorio_frota(df_filial, filial, caminho_saida):
     # Ajustar larguras
     ws.column_dimensions["A"].width = 15  # Placa
     ws.column_dimensions["B"].width = 40  # Modelo
-    ws.column_dimensions["C"].width = 30  # FilialOperacional
-    ws.column_dimensions["D"].width = 25  # SituacaoVeiculo
+    ws.column_dimensions["C"].width = 20  # Montadora
+    ws.column_dimensions["D"].width = 30  # FilialOperacional
+    ws.column_dimensions["E"].width = 25  # SituacaoVeiculo
+    ws.column_dimensions["F"].width = 30  # Data_Transferencia
 
     wb.save(caminho_saida)
 

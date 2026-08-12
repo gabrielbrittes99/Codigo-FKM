@@ -16,8 +16,8 @@ from openpyxl.utils import get_column_letter
 # Importar módulo de mapeamento de filiais
 from src.filial_mapping import (
     aplicar_filial_manutencao,
-    criar_mapa_filiais,
     normalizar_filial,
+    UNIDADES_NAO_OPERACIONAIS,
 )
 
 
@@ -211,33 +211,23 @@ def main():
 
             # ==================== MAPEAMENTO DE FILIAIS ====================
             print("\n" + "=" * 80)
-            print("APLICANDO PRIORIZAÇÃO DE FILIAL DE MANUTENÇÃO COM LÓGICA TEMPORAL")
+            print("APLICANDO FILIAL POR MOVIMENTAÇÕES DO BLUEFLEET (dbo.Movimentos)")
             print("=" * 80)
 
-            # Criar mapa de filiais a partir da planilha de manutenção
-            arquivo_manutencao = config.ARQUIVO_ENTRADA_MANUTENCAO
-            if arquivo_manutencao and os.path.exists(arquivo_manutencao):
-                historico_filiais = criar_mapa_filiais(arquivo_manutencao)
+            # Determina a filial de cada abastecimento pela tabela de movimentos:
+            # regra "o custo segue o veículo" — usa a posição do veículo na data do registro
+            df = aplicar_filial_manutencao(
+                df,
+                {},
+                coluna_placa="Placa",
+                coluna_garagem="Garagem",
+                coluna_data="Data da transacao",
+            )
 
-                # Aplicar filial de manutenção com lógica temporal
-                df = aplicar_filial_manutencao(
-                    df,
-                    historico_filiais,
-                    coluna_placa="Placa",
-                    coluna_garagem="Garagem",
-                    coluna_data="Data da transacao",
-                )
+            # Correções pontuais por posto (ex: AUTO POSTO PRA FRENTE BRASIL → CWB BASE)
+            df = corrigir_filial_por_posto(df)
 
-                # Aplicar correções por posto (Ex: AUTO POSTO PRA FRENTE BRASIL)
-                df = corrigir_filial_por_posto(df)
-
-                # Usar Filial_Final para agrupamento
-                nome_coluna_filial = "Filial_Final"
-
-            else:
-                print(f"⚠️ Arquivo de manutenção não encontrado.")
-                print("   Usando coluna 'Garagem' original.")
-                nome_coluna_filial = "Garagem"
+            nome_coluna_filial = "Filial_Final"
 
             # Substituir SAO FREGUESIA por SAO PERUS
             df = substituir_freguesia_por_perus(df, nome_coluna_filial)
@@ -255,7 +245,19 @@ def main():
                     print("GERANDO ARQUIVOS POR FILIAL")
                     print("=" * 80)
 
-                    for idx, filial in enumerate(filiais_unicas, 1):
+                    filiais_operacionais = [
+                        f for f in filiais_unicas
+                        if f not in UNIDADES_NAO_OPERACIONAIS
+                        and not str(f).upper().startswith("REFERÊNCIA")
+                        and not str(f).upper().startswith("REFERENCIA")
+                    ]
+                    ignoradas = set(filiais_unicas) - set(filiais_operacionais)
+                    if ignoradas:
+                        print(f"\n⏭️  Ignoradas (fora do FKM, vão para relatório informativo):")
+                        for f in sorted(ignoradas):
+                            print(f"      - {f} ({len(df[df[nome_coluna_filial] == f])} registros)")
+
+                    for idx, filial in enumerate(filiais_operacionais, 1):
                         df_filial = df[df[nome_coluna_filial] == filial].copy()
 
                         # Criar pasta da filial
@@ -270,7 +272,7 @@ def main():
                             pasta_filial, nome_arquivo_saida
                         )
 
-                        print(f"\n[{idx}/{len(filiais_unicas)}] 📊 {filial}")
+                        print(f"\n[{idx}/{len(filiais_operacionais)}] 📊 {filial}")
                         print(f"      Registros: {len(df_filial)}")
                         print(f"      Pasta: {filial}/")
                         print(f"      Gerando: {nome_arquivo_saida}")
@@ -312,7 +314,7 @@ def main():
                     print(f"\n📁 Arquivos salvos em: {pasta_periodo}")
                     print(f"\n✨ Estrutura:")
                     print(f"   📂 {config.PASTA_PERIODO}/")
-                    for filial in sorted(filiais_unicas):
+                    for filial in sorted(filiais_operacionais):
                         nome_limpo = "".join(
                             c
                             for c in str(filial)

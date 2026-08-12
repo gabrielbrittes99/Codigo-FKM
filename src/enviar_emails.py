@@ -1,12 +1,11 @@
 """
 Script para disparo automático dos e-mails de fechamento (FKM) por filial.
-Lê a configuração de e-mails de 'dados/emails_filiais.csv' e anexa os relatórios gerados.
+Lê a configuração de e-mails diretamente da tabela 'torre.email_gritsch_filiais' do banco PostgreSQL e anexa os relatórios gerados.
 """
 
 import os
 import sys
 import smtplib
-import csv
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from email.mime.base import MIMEBase
@@ -14,11 +13,9 @@ from email import encoders
 from dotenv import load_dotenv
 
 from src import config
+from src.extrair_dados_bluefleet import obter_conexao_dw
 
 load_dotenv()
-
-# Caminho para o CSV de e-mails
-CSV_EMAILS_PATH = os.path.join(config.PROJECT_ROOT, "dados", "emails_filiais.csv")
 
 
 def obter_conexao_smtp():
@@ -40,9 +37,14 @@ def obter_conexao_smtp():
 
 
 def enviar_email_filial(server, filial_folder_name, nome_exibicao, responsavel, destinatarios_str, cc_str, pasta_periodo):
-    # Destinatários e Cc como listas
-    destinatarios = [d.strip() for d in destinatarios_str.split(";") if d.strip()]
-    cc = [c.strip() for c in cc_str.split(";") if c.strip()]
+    # Destinatários e Cc como listas (suporta tanto vírgula quanto ponto e vírgula como separadores)
+    destinatarios = []
+    if destinatarios_str:
+        destinatarios = [d.strip() for d in str(destinatarios_str).replace(",", ";").split(";") if d.strip()]
+        
+    cc = []
+    if cc_str:
+        cc = [c.strip() for c in str(cc_str).replace(",", ";").split(";") if c.strip()]
 
     # Adicionar destinatários do e-mail de envio no To / Cc
     remetente = os.getenv("SMTP_USER")
@@ -113,44 +115,58 @@ def main():
     print(f"DISPARO AUTOMÁTICO DE E-MAILS DE FECHAMENTO - {config.MES}/{config.ANO}")
     print("=" * 80)
 
-    if not os.path.exists(CSV_EMAILS_PATH):
-        print(f"❌ ERRO: Arquivo de e-mails não encontrado em '{CSV_EMAILS_PATH}'")
-        sys.exit(1)
-
     try:
         print("🔌 Conectando ao servidor SMTP...")
         server = obter_conexao_smtp()
-        print("✅ Conectado com sucesso!")
+        print("✅ Conectado com sucesso ao SMTP!")
     except Exception as e:
         print(f"❌ Falha ao conectar ao SMTP: {e}")
+        sys.exit(1)
+
+    try:
+        print("🔌 Conectando ao banco de dados DW...")
+        conn = obter_conexao_dw()
+        cursor = conn.cursor()
+        print("✅ Conectado com sucesso ao DW!")
+        
+        print("📥 Buscando configurações de e-mails na tabela 'torre.email_gritsch_filiais'...")
+        query = """
+            SELECT filial_operacional, email_destino, email_cc 
+            FROM torre.email_gritsch_filiais 
+            WHERE ativo = TRUE 
+            ORDER BY id ASC
+        """
+        cursor.execute(query)
+        rows = cursor.fetchall()
+        cursor.close()
+        conn.close()
+        print(f"✅ {len(rows)} filiais ativas carregadas do banco de dados.")
+    except Exception as e:
+        server.quit()
+        print(f"❌ Falha ao carregar e-mails do banco de dados: {e}")
         sys.exit(1)
 
     enviados = 0
     falhas = 0
 
-    with open(CSV_EMAILS_PATH, mode='r', encoding='utf-8') as f:
-        reader = csv.DictReader(f)
-        for idx, row in enumerate(reader, 1):
-            filial = row['Filial']
-            nome_exib = row['Nome_Exibicao']
-            responsavel = row['Responsavel']
-            email = row['Email']
-            cc = row['Cc']
+    for idx, (filial_op, email_destino, email_cc) in enumerate(rows, 1):
+        # Limpar o prefixo GRITSCH para exibição amigável
+        nome_exib = filial_op.replace("GRITSCH - ", "").replace("GRITSCH – ", "").strip()
+        
+        print(f"\n[{idx}] Processando {nome_exib} ({filial_op})...")
+        if not email_destino:
+            print("   ⚠️ Sem e-mail destinatário configurado no banco de dados. Pulando...")
+            continue
 
-            print(f"\n[{idx}] Processando {nome_exib} ({filial})...")
-            if not email:
-                print("   ⚠️ Sem e-mail destinatário configurado. Pulando...")
-                continue
-
-            try:
-                sucesso = enviar_email_filial(server, filial, nome_exib, responsavel, email, cc, config.PASTA_PERIODO)
-                if sucesso:
-                    enviados += 1
-                else:
-                    falhas += 1
-            except Exception as e:
-                print(f"   ❌ Erro ao enviar e-mail: {e}")
+        try:
+            sucesso = enviar_email_filial(server, filial_op, nome_exib, "", email_destino, email_cc, config.PASTA_PERIODO)
+            if sucesso:
+                enviados += 1
+            else:
                 falhas += 1
+        except Exception as e:
+            print(f"   ❌ Erro ao enviar e-mail: {e}")
+            falhas += 1
 
     server.quit()
     print("\n" + "=" * 80)

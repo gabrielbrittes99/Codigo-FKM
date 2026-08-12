@@ -83,7 +83,7 @@ def extrair_manutencao(mes_nome, ano):
 
     query = f"""
     SELECT * 
-    FROM [referencia].[dbo].[vw_RelatorioFKM_Historico]
+    FROM [referencia].[dbo].[torre_vw_FechamentoManutencao]
     WHERE DataCriacao >= '{data_inicio}' AND DataCriacao < '{data_fim}'
     ORDER BY DataCriacao DESC;
     """

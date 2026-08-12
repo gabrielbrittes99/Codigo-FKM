@@ -60,6 +60,14 @@ def carregar_frota(caminho_frota):
         df_frota = df_frota[df_frota["Placa_Clean"].str.len() > 0]
         df_frota = df_frota[df_frota["Placa_Clean"] != "NAN"]
 
+        # Remover placas excluídas (sinistrados, baixados, veículos para venda)
+        from src.filial_mapping import PLACAS_EXCLUIDAS
+        if PLACAS_EXCLUIDAS:
+            excluidas_count = df_frota["Placa_Clean"].isin(PLACAS_EXCLUIDAS).sum()
+            if excluidas_count > 0:
+                df_frota = df_frota[~df_frota["Placa_Clean"].isin(PLACAS_EXCLUIDAS)]
+                print(f"   🚫 Removidas {excluidas_count} placas excluídas da frota (para venda/sinistrados)")
+
         # Manter apenas colunas relevantes
         df_frota = df_frota[["Placa_Clean", "Grupo", "Modelo Simplificado"]].copy()
 

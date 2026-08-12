@@ -82,10 +82,12 @@ def aplicar_excecoes_placa(df, coluna_filial="FILIAL", coluna_placa="Placa"):
             .str.upper()
         )
 
-    from src.filial_mapping import EXCECOES_FORCADAS
+    from src.filial_mapping import EXCECOES_FORCADAS, EXCECOES_MANUTENCAO
+
+    excecoes = {**EXCECOES_FORCADAS, **EXCECOES_MANUTENCAO}
     
-    # Aplica APENAS para placas que estão na lista de exceções forçadas
-    for placa, filial_correta in EXCECOES_FORCADAS.items():
+    # Aplica para placas que estão na lista de exceções forçadas ou de manutenção
+    for placa, filial_correta in excecoes.items():
         if "Placa_Clean" in df.columns:
             mask = df["Placa_Clean"] == placa
         else:

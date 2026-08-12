@@ -1,0 +1,209 @@
+# ============================================================
+# Conteúdo Editorial — Relatório Executivo Mensal
+#
+# Fecha um mês contra o mês anterior e mostra o acumulado do ano.
+# Este arquivo controla TODO o texto; os números vêm dos bancos.
+#
+# ------------------------------------------------------------
+# COMO ESCREVER
+# ------------------------------------------------------------
+# 1) Qualquer texto aceita {placeholders} trocados pelos valores
+#    calculados. Exemplo:
+#       "O custo por km ficou em {mes_ckm}, {var_ckm} vs {mes_anterior}."
+#
+# 2) Toda página tem `observacoes:` — seu espaço para comentar
+#    aquele gráfico. Vazio, o box não aparece.
+#
+# 3) A última página (`pagina_12_observacoes_gerais`) é o espaço
+#    livre para melhorias, ações em andamento e pontos de atenção.
+#
+# 4) `habilitada: false` remove a página do PDF.
+#
+# ------------------------------------------------------------
+# PLACEHOLDERS DISPONÍVEIS
+# ------------------------------------------------------------
+# Período:  {mes} {mes_curto} {mes_anterior} {mes_anterior_curto}
+#           {ano} {meses_fechados} {periodo_ano}
+#
+# Valores — troque o prefixo:
+#   mes_   = mês fechado      (ex.: {mes_total})
+#   ant_   = mês anterior     (ex.: {ant_total})
+#   acum_  = acumulado do ano (ex.: {acum_total})
+#
+#   ..._total ..._manutencao ..._combustivel ..._pedagio
+#   ..._manutencao_k  → em milhares (R$ 684K)
+#   ..._km ..._litros ..._consumo ..._diesel ..._passagens
+#   ..._ckm ..._ckm_combustivel ..._ckm_manutencao
+#
+#   {media_total} {media_km}  → média mensal do ano
+#
+# Variações do mês vs mês anterior:
+#   {var_total} {var_ckm} {var_manutencao} {var_combustivel}
+#   {var_pedagio} {var_km} {var_diesel} {var_consumo}
+#   {var_ckm_manutencao} {var_ckm_combustivel} {var_passagens}
+#
+#   Toda variação existe em duas formas:
+#     {var_ckm}        → 6.6%    (para "caiu 6.6%")
+#     {var_ckm_sinal}  → -6.6%   (para valores entre parênteses)
+#
+# Destaques:  {delta_pedagio} {delta_passagens}
+#             {top_concessionarias} {top_pracas}
+#             {filial_mais_cara} {filial_mais_barata}
+# ============================================================
+
+relatorio:
+  titulo: "Torre de Controle"
+  subtitulo: "Relatório Executivo Mensal"
+  periodo: "{mes} {ano}"          # vazio = usa o mês do comando
+  empresa: "Grupo Gritsch"
+  rodape: "Transportes Gritsch · Torre de Controle · BlueFleet · TruckPag"
+  data_geracao: "{mes} {ano}"
+
+# ------------------------------------------------------------
+pagina_1_visao_executiva:
+  habilitada: true
+  titulo: "Visão executiva: {mes} vs {mes_anterior}"
+  titulo_grafico: "Evolução mensal: {periodo_ano}"
+
+# ------------------------------------------------------------
+pagina_2_custo_km:
+  habilitada: true
+  titulo: "Evolução do custo por km"
+  subtitulo: "Leitura do mês"
+  paragrafos:
+    - titulo: "Custo por km em {mes}: {mes_ckm}/km."
+      texto: "{mes_anterior}: {ant_ckm}/km. Variação de {var_ckm_sinal}. O total operacional do mês foi de {mes_total}, contra {ant_total} em {mes_anterior}."
+    - titulo: "Combustível."
+      texto: "{mes_combustivel} no mês ({var_combustivel_sinal} vs {mes_anterior}), com preço médio do Diesel S10 em {mes_diesel}/L e consumo de {mes_consumo} km/L."
+    - titulo: "Manutenção."
+      texto: "{mes_manutencao_k} no mês ({var_manutencao_sinal} vs {mes_anterior}). Custo por km de manutenção: {mes_ckm_manutencao}/km, contra {ant_ckm_manutencao}/km em {mes_anterior}."
+    - titulo: "Pedágio."
+      texto: "{mes_pedagio} no mês ({var_pedagio_sinal} vs {mes_anterior}), com {mes_passagens} passagens e variação de {delta_passagens} passagens."
+  observacoes: []
+
+# ------------------------------------------------------------
+pagina_3_indicadores:
+  habilitada: true
+  titulo: "Custo por quilômetro: {mes} vs {mes_anterior}"
+  subtitulo: "Indicadores operacionais"
+  titulo_diesel: "Preço do Diesel S10 no ano"
+  texto_diesel: "Em {mes} o Diesel S10 ficou em {mes_diesel}/L, contra {ant_diesel}/L em {mes_anterior} ({var_diesel_sinal}). A frota rodou {mes_km} km com consumo médio de {mes_consumo} km/L."
+  observacoes: []
+
+# ------------------------------------------------------------
+pagina_4_manutencao:
+  habilitada: true
+  titulo: "Manutenção por natureza ({mes} vs {mes_anterior})"
+  titulo_filiais: "Manutenção: Top 10 filiais em {mes}"
+  observacoes: []
+
+# ------------------------------------------------------------
+pagina_5_combustivel:
+  habilitada: true
+  titulo: "Combustível por tipo ({mes} vs {mes_anterior})"
+  subtitulo: "Gestão de abastecimento e condução"
+  topicos:
+    - titulo: "Monitoramento ativo de preços por região."
+      texto: "Acompanhamento contínuo dos postos com melhor preço de Diesel S10 por rota, priorizando os credenciados TruckPag."
+    - titulo: "Comparação sistemática com a referência ANP."
+      texto: "Comparamos o preço praticado pelos postos credenciados com a referência ANP da cidade e do posto, buscando negociar valores sempre abaixo dessa referência."
+    - titulo: "Renegociação de tags e combustível com redes parceiras."
+      texto: "Negociação de valores de combustível com a Rede Sim e a Rede Galo, e de tags com a TruckPag, seguindo em andamento."
+    - titulo: "Controle de consumo via rastreadores e FKM Digital."
+      texto: "Cobrança de motoristas com consumo fora do padrão. FKM Digital seguindo para 100% de cobertura dos postos."
+    - titulo: "Relatórios diários e semanais de excesso de velocidade."
+      texto: "Com o acompanhamento diário e semanal dos excessos de velocidade, temos conseguido melhorar a média dos veículos, reduzindo multas e evitando problemas relacionados a excesso de velocidade."
+  observacoes: []
+
+# ------------------------------------------------------------
+pagina_6_pedagio:
+  habilitada: true
+  titulo: "Pedágio: evolução mensal"
+  titulo_concessionarias: "Concessionárias com maior gasto em {mes}"
+  texto_analise: "Em {mes} o pedágio somou {mes_pedagio} ({var_pedagio_sinal} vs {mes_anterior}), com {mes_passagens} passagens. {top_concessionarias} concentram o maior gasto do mês."
+  observacoes: []
+
+# ------------------------------------------------------------
+pagina_7_custo_km_filial:
+  habilitada: true
+  titulo: "Custo por km: combustível por filial em {mes}"
+  # Faixas de cor do gráfico (R$/km de combustível)
+  limite_alto: 1.00
+  limite_baixo: 0.65
+  observacoes: []
+
+# ------------------------------------------------------------
+pagina_8_detalhamento_filial:
+  habilitada: true
+  titulo: "Custo por km por filial: {mes} vs {mes_anterior}"
+  observacoes: []
+
+# ------------------------------------------------------------
+pagina_9_hodometro_manutencao:
+  habilitada: true
+  titulo: "Hodômetro vs custo de manutenção: Top 20 placas em {mes}"
+  corte_hodometro: 200000
+  texto_analise: "Veículos com maior quilometragem e maior idade concentram os maiores custos de manutenção. O custo começa a subir de forma mais acentuada a partir da faixa de 200 mil km rodados (linha tracejada), ponto a partir do qual vale reforçar o acompanhamento preventivo."
+  observacoes: []
+
+# ------------------------------------------------------------
+pagina_10_acumulado:
+  habilitada: true
+  titulo: "Acumulado do ano: {periodo_ano}"
+  titulo_analise: "A leitura do mês"
+  texto_analise: >-
+    Em {mes} o custo total operacional foi de {mes_total}, com {mes_km} km rodados e custo por
+    km de {mes_ckm}. No acumulado dos {meses_fechados} meses fechados, o grupo soma {acum_total}
+    e {acum_km} km, o que dá uma média de {media_total} por mês. O custo por km acumulado do ano
+    está em {acum_ckm}. Substitua este texto pela leitura da Torre sobre o mês: o que explica a
+    variação, o que foi ação nossa e o que foi efeito de mercado.
+  observacoes: []
+
+# ------------------------------------------------------------
+pagina_11_proximos_passos:
+  habilitada: true
+  titulo: "Próximos passos"
+  itens:
+    - titulo: "Renegociação de tags e combustível."
+      texto: "Continuar as negociações com a TruckPag, a Rede Sim e a Rede Galo, buscando manter os valores sempre abaixo da referência ANP."
+    - titulo: "FKM Digital."
+      texto: "Finalizar o credenciamento dos postos restantes para alcançar 100% de cobertura no controle digital de abastecimento."
+    - titulo: "Controle de velocidade."
+      texto: "Intensificar o acompanhamento via rastreadores e os relatórios diários e semanais de excesso de velocidade, reduzindo multas e melhorando a média dos veículos."
+    - titulo: "Renovação de frota."
+      texto: "Manter o ritmo de renovação nos veículos acima de 200 mil km, priorizando os que concentram maior custo de manutenção."
+    - titulo: "Manutenção sob aprovação da Torre."
+      texto: "Ajustar os processos para que as manutenções só sejam realizadas após aprovação da Torre, sem interferir na disponibilidade do veículo para o roteiro."
+    - titulo: "Manutenção preventiva em problemas crônicos."
+      texto: "Antecipar manutenções preventivas nos problemas já identificados como crônicos, reduzindo a necessidade de manutenções corretivas."
+  observacoes: []
+
+# ------------------------------------------------------------
+# ESPAÇO LIVRE DA TORRE
+# Apague os itens de exemplo e escreva os seus. Blocos ou itens
+# vazios simplesmente não são impressos.
+# ------------------------------------------------------------
+pagina_12_observacoes_gerais:
+  habilitada: true
+  titulo: "Observações da Torre de Controle — {mes} {ano}"
+  blocos:
+    - titulo: "O que melhoramos no mês"
+      itens:
+        - titulo: "Escreva aqui o ganho do mês."
+          texto: "Use número sempre que possível. Ex.: manutenção por km saiu de {ant_ckm_manutencao} para {mes_ckm_manutencao} ({var_ckm_manutencao_sinal})."
+        - titulo: ""
+          texto: ""
+
+    - titulo: "Ações em andamento"
+      itens:
+        - titulo: "Ação, responsável e prazo."
+          texto: "Uma linha por ação. Ex.: renegociação da tag TruckPag — Torre de Controle — fechamento previsto para o próximo mês."
+        - titulo: ""
+          texto: ""
+
+    - titulo: "Pontos de atenção"
+      itens:
+        - titulo: "Filiais fora da curva."
+          texto: "Ex.: {filial_mais_cara} é a filial com maior custo de combustível por km no mês. Registre o encaminhamento dado."
+        - titulo: ""
+          texto: ""

@@ -68,3 +68,6 @@ ajustes_placas.csv
 dados/retornados/*.xls
 dados/retornados/*.xlsx
 dados/retornados/*.bak
+
+# Extrações brutas dos bancos usadas pelo relatório da Torre
+dados/cache/

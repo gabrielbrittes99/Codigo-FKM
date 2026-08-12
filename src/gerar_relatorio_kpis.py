@@ -106,7 +106,7 @@ def gerar_relatorio_kpis():
         )
         return
 
-    df_comb = pd.read_excel(config.ARQUIVO_ENTRADA_COMBUSTIVEL)
+    df_comb = pd.read_excel(config.ARQUIVO_ENTRADA_COMBUSTIVEL, engine="openpyxl")
     print(f"   ✅ Combustível: {len(df_comb)} registros")
 
     # Manutenção
@@ -116,7 +116,7 @@ def gerar_relatorio_kpis():
         )
         return
 
-    df_manut = pd.read_excel(config.ARQUIVO_ENTRADA_MANUTENCAO)
+    df_manut = pd.read_excel(config.ARQUIVO_ENTRADA_MANUTENCAO, engine="openpyxl")
     print(f"   ✅ Manutenção: {len(df_manut)} registros")
 
     # Frota
@@ -144,6 +144,13 @@ def gerar_relatorio_kpis():
     # Aplicar normalização de filiais
     df_comb["Garagem"] = df_comb["Garagem"].apply(normalizar_filial)
     df_manut["FILIAL"] = df_manut["FILIAL"].apply(normalizar_filial)
+
+    # Aplicar exceções exclusivas de manutenção
+    from src.filial_mapping import EXCECOES_MANUTENCAO
+    for placa_ex, filial_ex in EXCECOES_MANUTENCAO.items():
+        mask_m = df_manut["Placa_Clean"] == placa_ex
+        if mask_m.sum() > 0:
+            df_manut.loc[mask_m, "FILIAL"] = filial_ex
 
     # FILTRAR: Remover filiais REFERÊNCIA da manutenção
     registros_antes = len(df_manut)
@@ -957,7 +964,7 @@ def gerar_relatorio_kpis():
     print("\n📝 Gerando arquivo Excel...")
 
     # Criar diretório de saída
-    caminho_saida = os.path.join(config.DIRETORIO_BASE_SAIDA, config.MES)
+    caminho_saida = os.path.join(config.DIRETORIO_BASE_SAIDA, config.PASTA_PERIODO)
     os.makedirs(caminho_saida, exist_ok=True)
 
     # Nome do arquivo
