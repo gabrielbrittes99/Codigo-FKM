@@ -68,35 +68,81 @@ plt.rcParams.update({
 # FORMATAÇÃO
 # =======================================================================
 
-def moeda(valor, casas=2):
-    """R$ 1.47M / R$ 354K — escala automática, como no relatório de referência."""
+# Todo valor em reais sai com 2 casas decimais e no padrão brasileiro
+# (vírgula no decimal, ponto no milhar). Use sempre estes helpers em vez de
+# formatar direto no call site, para não sobrar ponto de formatação divergente.
+
+CASAS_MOEDA = 2
+
+
+def _br(numero, casas=CASAS_MOEDA):
+    """1234.5 -> '1.234,50' (padrão brasileiro)."""
+    return f"{numero:,.{casas}f}".replace(",", "X").replace(".", ",").replace("X", ".")
+
+
+def moeda(valor, casas=CASAS_MOEDA):
+    """Escala automática, para cards e rótulos curtos: R$ 2,94M / R$ 684,24K."""
     if abs(valor) >= 1_000_000:
-        return f"R$ {valor / 1_000_000:.{casas}f}M"
+        return f"R$ {_br(valor / 1_000_000, casas)}M"
     if abs(valor) >= 1_000:
-        return f"R$ {valor / 1_000:.0f}K"
-    return f"R$ {valor:.0f}"
+        return f"R$ {_br(valor / 1_000, casas)}K"
+    return f"R$ {_br(valor, casas)}"
+
+
+def moeda_cheia(valor):
+    """Valor completo, sem escala: R$ 2.941.567,89."""
+    return f"R$ {_br(valor)}"
+
+
+def numero_br(valor, casas=CASAS_MOEDA):
+    """Número no padrão brasileiro, sem símbolo: 1.212,45. Para colunas de tabela."""
+    return _br(valor, casas)
+
+
+def moeda_k(valor_em_milhares):
+    """Rótulo de gráfico cujo eixo já está em milhares: R$ 1.212,45K."""
+    return f"R$ {_br(valor_em_milhares)}K"
+
+
+def moeda_milhar(valor):
+    """Recebe o valor cheio e devolve em milhares: R$ 1.212,45K."""
+    return moeda_k(valor / 1_000)
+
+
+def valor_km(valor, sufixo=""):
+    """Custo por quilômetro: R$ 1,24 (ou R$ 1,24/km com sufixo='/km')."""
+    return f"R$ {_br(valor)}{sufixo}"
+
+
+def valor_litro(valor):
+    """Preço por litro: R$ 6,42/L."""
+    return f"R$ {_br(valor)}/L"
 
 
 def milhares(valor):
-    return f"{valor / 1_000:.0f}K"
+    """Volume em escala de milhar (litros): 322K. Não é valor monetário."""
+    return f"{_br(valor / 1_000, 0)}K"
 
 
 def km_curto(valor):
+    """Quilometragem: 4,86M ou 658K."""
     if abs(valor) >= 1_000_000:
-        return f"{valor / 1_000_000:.2f}M"
-    return f"{valor / 1_000:.0f}K"
+        return f"{_br(valor / 1_000_000)}M"
+    return f"{_br(valor / 1_000, 0)}K"
 
 
 def pct(valor, casas=1):
-    return f"{abs(valor):.{casas}f}%"
+    return f"{_br(abs(valor), casas)}%"
 
 
 def pct_sinal(valor, casas=1):
-    return f"{valor:+.{casas}f}%"
+    sinal = "+" if valor >= 0 else "-"
+    return f"{sinal}{_br(abs(valor), casas)}%"
 
 
 def inteiro(valor):
-    return f"{int(round(valor)):,}"
+    """Contagem com separador de milhar: 13.997."""
+    return _br(valor, 0)
 
 
 class _DicionarioTolerante(dict):
@@ -224,11 +270,36 @@ def marcador(c, x, topo, tamanho=8, cor=None):
     c.circle(x + tamanho * 0.28, y(topo) + tamanho * 0.30, tamanho * 0.28, stroke=0, fill=1)
 
 
+def preenchido(valor):
+    """True se o campo do YAML tem conteúdo de verdade (não vazio, não só espaço)."""
+    if valor is None:
+        return False
+    if isinstance(valor, str):
+        return bool(valor.strip())
+    if isinstance(valor, (list, tuple)):
+        return bool(itens_preenchidos(valor))
+    return bool(valor)
+
+
+def itens_preenchidos(itens):
+    """Descarta os itens em branco que ficam no YAML como modelo a preencher."""
+    return [i for i in (itens or [])
+            if isinstance(i, dict) and (str(i.get("titulo") or "").strip()
+                                        or str(i.get("texto") or "").strip())]
+
+
+def secao_opcional(c, topo, titulo, conteudo, tamanho=15):
+    """Só escreve o título se houver conteúdo — evita seção com corpo vazio."""
+    if not preenchido(conteudo):
+        return None
+    return secao(c, topo, titulo, tamanho)
+
+
 def lista_topicos(c, topo, itens, contexto, largura=None, tamanho_titulo=9.5,
                   tamanho_texto=9, espaco=11):
     """Blocos 'título em negrito + descrição', usados nas páginas editoriais."""
     largura = largura or (LARGURA_UTIL - 22)
-    for item in itens or []:
+    for item in itens_preenchidos(itens):
         marcador(c, MARGEM + 4, topo - 0.5)
         texto(c, MARGEM + 22, topo, interpolar(item.get("titulo", ""), contexto),
               tamanho_titulo, C_TEXTO, negrito=True)
@@ -262,6 +333,23 @@ def separadores(ax, posicoes):
     """Linhas tracejadas separando blocos de períodos no eixo de meses."""
     for posicao in posicoes:
         ax.axvline(posicao, color="#AAAAAA", linestyle="--", linewidth=0.8, zorder=0)
+
+
+def rotulos_par_de_barras(ax, indice, valor_ref, valor_atual, teto, deslocamento=0.2,
+                          tamanho=7.5):
+    """Escreve os dois valores de um par de barras sem que os rótulos se toquem.
+
+    Com 2 casas decimais os rótulos ficam largos; escalonar a altura e usar a
+    escala automática (R$ 1,54M em vez de R$ 1.539,11K) mantém tudo legível.
+    """
+    ax.text(indice - deslocamento, valor_ref + teto * 0.015, moeda(valor_ref * 1000),
+            ha="center", fontsize=tamanho, color=TEXTO_SUAVE)
+    ax.text(indice + deslocamento, valor_atual + teto * 0.075, moeda(valor_atual * 1000),
+            ha="center", fontsize=tamanho, fontweight="bold", color=TEXTO)
+    delta = (valor_atual / valor_ref - 1) * 100 if valor_ref else 0
+    ax.text(indice + deslocamento, valor_atual + teto * 0.145, f"({pct_sinal(delta)})",
+            ha="center", fontsize=tamanho + 0.5, fontweight="bold",
+            color=VERDE if delta < 0 else VERMELHO)
 
 
 def cor_sobre(cor_barra):
@@ -351,7 +439,7 @@ def pagina_observacoes_gerais(c, cont, contexto, chave="pagina_observacoes_gerai
     topo = secao(c, 81, interpolar(pagina.get("titulo", "Observações da Torre"), contexto)) + 20
 
     for bloco in pagina.get("blocos") or []:
-        itens = [i for i in (bloco.get("itens") or []) if i.get("titulo") or i.get("texto")]
+        itens = itens_preenchidos(bloco.get("itens"))
         if not itens:
             continue
         texto(c, MARGEM, topo + 11, interpolar(bloco.get("titulo", ""), contexto), 11,
@@ -363,12 +451,34 @@ def pagina_observacoes_gerais(c, cont, contexto, chave="pagina_observacoes_gerai
             break
 
 
-def montar_documento(canvas_obj, conteudo, paginas, dados, contexto):
-    """Desenha cabeçalho/rodapé em volta de cada página habilitada."""
-    ativas = [(func, chave) for func, chave in paginas
-              if conteudo.get(chave, {}).get("habilitada", False)]
+def tem_blocos(pagina):
+    """True se a página de observações tem algum bloco preenchido."""
+    return any(itens_preenchidos(b.get("itens")) for b in (pagina.get("blocos") or []))
 
-    for numero, (func, _) in enumerate(ativas, start=1):
+
+def montar_documento(canvas_obj, conteudo, paginas, dados, contexto):
+    """Desenha cabeçalho/rodapé em volta de cada página habilitada.
+
+    Cada entrada de `paginas` é (funcao, chave_yaml) ou
+    (funcao, chave_yaml, condicao) — a condição recebe (dicionário da página,
+    dados) e devolve False quando não há nada a mostrar. Páginas puramente
+    editoriais somem do PDF enquanto o YAML estiver em branco; páginas
+    orientadas a dado (ex.: placas recorrentes) somem quando a lista calculada
+    vier vazia naquele período, em vez de sair uma folha com só o título.
+    """
+    ativas = []
+    for entrada in paginas:
+        func, chave = entrada[0], entrada[1]
+        condicao = entrada[2] if len(entrada) > 2 else None
+        pagina = conteudo.get(chave, {})
+        if not pagina.get("habilitada", False):
+            continue
+        if condicao and not condicao(pagina, dados):
+            print(f"   ↷ {chave}: sem conteúdo, página omitida.")
+            continue
+        ativas.append(func)
+
+    for numero, func in enumerate(ativas, start=1):
         cabecalho(canvas_obj, conteudo, numero, len(ativas))
         func(canvas_obj, dados, conteudo, contexto)
         rodape(canvas_obj, conteudo)

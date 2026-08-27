@@ -14,7 +14,7 @@
 # 2) Toda página tem `observacoes:` — seu espaço para comentar
 #    aquele gráfico. Vazio, o box não aparece.
 #
-# 3) A última página (`pagina_12_observacoes_gerais`) é o espaço
+# 3) A última página (`pagina_14_observacoes_gerais`) é o espaço
 #    livre para melhorias, ações em andamento e pontos de atenção.
 #
 # 4) `habilitada: false` remove a página do PDF.
@@ -31,7 +31,7 @@
 #   acum_  = acumulado do ano (ex.: {acum_total})
 #
 #   ..._total ..._manutencao ..._combustivel ..._pedagio
-#   ..._manutencao_k  → em milhares (R$ 684K)
+#   ..._manutencao_k  → em milhares (R$ 684,24K)
 #   ..._km ..._litros ..._consumo ..._diesel ..._passagens
 #   ..._ckm ..._ckm_combustivel ..._ckm_manutencao
 #
@@ -43,12 +43,17 @@
 #   {var_ckm_manutencao} {var_ckm_combustivel} {var_passagens}
 #
 #   Toda variação existe em duas formas:
-#     {var_ckm}        → 6.6%    (para "caiu 6.6%")
-#     {var_ckm_sinal}  → -6.6%   (para valores entre parênteses)
+#     {var_ckm}        → 6,6%    (para "caiu 6,6%")
+#     {var_ckm_sinal}  → -6,6%   (para valores entre parênteses)
 #
 # Destaques:  {delta_pedagio} {delta_passagens}
 #             {top_concessionarias} {top_pracas}
 #             {filial_mais_cara} {filial_mais_barata}
+#
+# Centralizacao TruckPag:
+#   {mes_combustivel_truckpag} {mes_combustivel_fora}
+#   {mes_pct_centralizado} {mes_pct_fora}
+#   (tambem com prefixo ant_ e acum_)
 # ============================================================
 
 relatorio:
@@ -73,6 +78,8 @@ pagina_2_custo_km:
   paragrafos:
     - titulo: "Custo por km em {mes}: {mes_ckm}/km."
       texto: "{mes_anterior}: {ant_ckm}/km. Variação de {var_ckm_sinal}. O total operacional do mês foi de {mes_total}, contra {ant_total} em {mes_anterior}."
+    - titulo: "{mes} teve {mes_dias_uteis} dias úteis, contra {ant_dias_uteis} em {mes_anterior} ({delta_dias_uteis})."
+      texto: "Mês com mais dias úteis roda mais e gasta mais em valor absoluto, por isso a comparação em reais precisa dessa referência. A média por dia útil foi de {mes_media_dia_util} ({var_media_dia_util_sinal} vs {mes_anterior}); em fins de semana e feriados, {mes_media_fds} por dia."
     - titulo: "Combustível."
       texto: "{mes_combustivel} no mês ({var_combustivel_sinal} vs {mes_anterior}), com preço médio do Diesel S10 em {mes_diesel}/L e consumo de {mes_consumo} km/L."
     - titulo: "Manutenção."
@@ -95,6 +102,24 @@ pagina_4_manutencao:
   habilitada: true
   titulo: "Manutenção por natureza ({mes} vs {mes_anterior})"
   titulo_filiais: "Manutenção: Top 10 filiais em {mes}"
+  # Franquia de seguro é hoje o único sinal confiável de sinistro dentro da
+  # manutenção. Reparo feito fora da franquia entra como corretiva comum,
+  # sem indicar a origem — por isso este número tende a estar subestimado.
+  nota_sinistro: "Deste total, {mes_sinistro} ({mes_sinistro_pct}) é franquia de seguro (sinistro) em {mes}. Reparo feito fora da franquia do seguro entra como manutenção corretiva comum, sem indicar a origem, então este número tende a estar subestimado."
+  titulo_observacoes: "Como ler as variações de Rodas e Pneus e Lataria e Pintura"
+  observacoes:
+    - titulo: "São naturezas de valor naturalmente flutuante."
+      texto: "Base pequena e comportamento irregular fazem a variação percentual ficar alta mesmo com pouca mudança em reais. A leitura correta é pelo acumulado do ano, não pela comparação mês a mês."
+    - titulo: "Pneu é compra em lote, não despesa mensal constante."
+      texto: "Em um mês entra uma compra leve, no seguinte uma mais pesada. Isso concentra o custo em meses específicos e produz a oscilação do gráfico, sem significar piora de gestão."
+    - titulo: "Lataria e Pintura acompanha batidas e sinistros."
+      texto: "É gasto reativo: depende da ocorrência de sinistros no período. Um único evento de maior porte já desloca a natureza inteira para cima."
+
+# ------------------------------------------------------------
+pagina_4b_manutencao_modelo:
+  habilitada: true
+  titulo: "Manutenção por modelo: custo médio por veículo no ano"
+  texto_analise: "Compara o custo médio de manutenção por veículo de cada modelo, só entre os que têm pelo menos 5 unidades na frota — abaixo disso a média fica instável. A linha pontilhada marca a média geral da frota. Modelo mais pesado custa mais por natureza; a leitura útil é olhar o quanto cada um se afasta da própria faixa de peso, não a lista inteira de uma vez."
   observacoes: []
 
 # ------------------------------------------------------------
@@ -102,25 +127,30 @@ pagina_5_combustivel:
   habilitada: true
   titulo: "Combustível por tipo ({mes} vs {mes_anterior})"
   subtitulo: "Gestão de abastecimento e condução"
-  topicos:
-    - titulo: "Monitoramento ativo de preços por região."
-      texto: "Acompanhamento contínuo dos postos com melhor preço de Diesel S10 por rota, priorizando os credenciados TruckPag."
-    - titulo: "Comparação sistemática com a referência ANP."
-      texto: "Comparamos o preço praticado pelos postos credenciados com a referência ANP da cidade e do posto, buscando negociar valores sempre abaixo dessa referência."
-    - titulo: "Renegociação de tags e combustível com redes parceiras."
-      texto: "Negociação de valores de combustível com a Rede Sim e a Rede Galo, e de tags com a TruckPag, seguindo em andamento."
-    - titulo: "Controle de consumo via rastreadores e FKM Digital."
-      texto: "Cobrança de motoristas com consumo fora do padrão. FKM Digital seguindo para 100% de cobertura dos postos."
-    - titulo: "Relatórios diários e semanais de excesso de velocidade."
-      texto: "Com o acompanhamento diário e semanal dos excessos de velocidade, temos conseguido melhorar a média dos veículos, reduzindo multas e evitando problemas relacionados a excesso de velocidade."
+  # O gráfico acima cobre só o que passou pela TruckPag. Esta nota fecha a
+  # diferença com o card de combustível da página 1.
+  nota_fora: "Os valores acima referem-se ao abastecimento via TruckPag. Somam-se a eles {mes_combustivel_fora} em compra direta fora da rede credenciada, detalhada na página de centralização."
+  # O que foi feito de gestão de combustível NESTE mês.
+  # Vazio: o gráfico aparece sozinho e o subtítulo não é impresso.
+  #   - titulo: "Renegociação com a Rede Sim."
+  #     texto: "Fechamos desconto de X centavos por litro nas praças de ..."
+  topicos: []
   observacoes: []
 
 # ------------------------------------------------------------
 pagina_6_pedagio:
   habilitada: true
   titulo: "Pedágio: evolução mensal"
+  texto_analise: "Em {mes} o pedágio somou {mes_pedagio} ({var_pedagio_sinal} vs {mes_anterior}), com {mes_passagens} passagens — variação de {delta_passagens} passagens. O detalhamento por filial e por concessionária está na página seguinte."
+  observacoes: []
+
+# ------------------------------------------------------------
+pagina_6b_pedagio_detalhe:
+  habilitada: true
+  titulo_filiais: "Pedágio: filiais com maior gasto em {mes}"
+  texto_filiais: "O gasto com pedágio segue a malha rodada por cada filial: as bases que operam rotas longas e em corredores pedagiados concentram naturalmente o maior valor."
   titulo_concessionarias: "Concessionárias com maior gasto em {mes}"
-  texto_analise: "Em {mes} o pedágio somou {mes_pedagio} ({var_pedagio_sinal} vs {mes_anterior}), com {mes_passagens} passagens. {top_concessionarias} concentram o maior gasto do mês."
+  texto_concessionarias: "{top_concessionarias} concentram o maior gasto do mês. A UF abaixo do nome e as praças ao lado do valor mostram em que rota o custo acontece."
   observacoes: []
 
 # ------------------------------------------------------------
@@ -141,69 +171,127 @@ pagina_8_detalhamento_filial:
 # ------------------------------------------------------------
 pagina_9_hodometro_manutencao:
   habilitada: true
-  titulo: "Hodômetro vs custo de manutenção: Top 20 placas em {mes}"
+  titulo: "Hodômetro vs custo de manutenção: Top {top_placas} placas em {mes}"
   corte_hodometro: 200000
-  texto_analise: "Veículos com maior quilometragem e maior idade concentram os maiores custos de manutenção. O custo começa a subir de forma mais acentuada a partir da faixa de 200 mil km rodados (linha tracejada), ponto a partir do qual vale reforçar o acompanhamento preventivo."
+
+  # Sua leitura do gráfico e da tabela. Vazio, a caixa não é impressa.
+  texto_analise: "As manutenções desta lista são de porte elevado e concentram-se em vans e caminhões, onde peça e mão de obra custam significativamente mais do que na frota leve. O número dentro de cada ponto do gráfico corresponde à linha da tabela ao lado."
+
   observacoes: []
 
 # ------------------------------------------------------------
-pagina_10_acumulado:
+# JUSTIFICATIVA POR PLACA
+#
+# O que foi feito em cada placa da lista da página anterior.
+# Só as placas preenchidas aqui aparecem, com o mesmo número e a
+# mesma cor do gráfico. Se nenhuma estiver preenchida, a página
+# inteira não entra no PDF.
+#
+# Formato:  PLACA-0000: "explicação"
+# ------------------------------------------------------------
+pagina_10_justificativas_placas:
+  habilitada: true
+  titulo: "O que explica as manutenções mais pesadas em {mes}"
+  texto_intro: "Cada item abaixo corresponde ao número do gráfico e da tabela da página anterior. As placas sem observação seguiram manutenção de rotina."
+  nota_numeracao: "A numeração e as cores acompanham o gráfico de hodômetro da página anterior."
+  justificativas:
+    TAW-2B27: "Sinistro. O valor foi lançado para acionamento do seguro e não representa manutenção recorrente da frota."
+    SEF-8G22: "Sinistro, ocorrência BlueFleet REFE-686904. O gasto total é de R$ 25 mil, dos quais apenas parte entrou neste mês; o restante será lançado no fechamento de 08/2026."
+    BEX-8E21: "Kit de reparo dos bicos injetores e descarbonização do filtro de partículas — itens de maior valor no serviço."
+    RHS-3G78: "Manutenção completa: freios, pneus, óleo e filtros. Somaram-se a substituição do para-brisa (quebra) e a correção de perda de força na bomba de combustível, os dois itens mais caros do serviço."
+    SFI-4A19: "Substituição do motor, aproveitando o motor de uma Sprinter sinistrada. A regularização documental demorou e já foi concluída; o veículo está liberado para retornar à frota."
+    SEH-4I04: "Reparo de câmbio e amortecedor, com revisão geral do veículo. O câmbio é o item de maior valor."
+    SDW-8B50: "Troca de óleo e filtros somada a freios, coxim, barra, sensor, rolamento e cardan — o cardan é o item de maior peso no total."
+    BCZ-3J21: "Coxim, amortecedor, filtros, mangueira, alinhamento, suporte de filtro, bomba de direção e correia do alternador. A bomba de direção responde pela maior parte do valor."
+    UCB-4H75: "Não é manutenção: é preparação de veículo novo. Foi executado molejo com aumento de molas para adequar o veículo à operação."
+
+  observacoes: []
+
+# ------------------------------------------------------------
+pagina_10b_placas_recorrentes:
+  habilitada: true
+  titulo: "Placas recorrentes no top 10 de manutenção no ano"
+  texto_intro: "Veículos que aparecem no top 10 de manutenção do mês em 2 meses ou mais dentro do período. Repetição indica desgaste estrutural do veículo (uso intenso, rota pesada, idade), não um evento isolado — vale checar sinistro e km rodado antes de investigar peça por peça."
+  observacoes: []
+
+# ------------------------------------------------------------
+pagina_11_acumulado:
   habilitada: true
   titulo: "Acumulado do ano: {periodo_ano}"
   titulo_analise: "A leitura do mês"
-  texto_analise: >-
-    Em {mes} o custo total operacional foi de {mes_total}, com {mes_km} km rodados e custo por
-    km de {mes_ckm}. No acumulado dos {meses_fechados} meses fechados, o grupo soma {acum_total}
-    e {acum_km} km, o que dá uma média de {media_total} por mês. O custo por km acumulado do ano
-    está em {acum_ckm}. Substitua este texto pela leitura da Torre sobre o mês: o que explica a
-    variação, o que foi ação nossa e o que foi efeito de mercado.
+  # Sua análise do mês: o que explica a variação, o que foi ação nossa e o que
+  # foi efeito de mercado. Vazio, o título e o parágrafo não são impressos.
+  # Os números para citar estão nos placeholders — ex.:
+  #   "Fechamos {mes} em {mes_total} ({var_total_sinal} vs {mes_anterior}) ..."
+  texto_analise: ""
   observacoes: []
 
 # ------------------------------------------------------------
-pagina_11_proximos_passos:
+pagina_12_centralizacao_truckpag:
+  habilitada: true
+  titulo: "Centralização do abastecimento na TruckPag"
+  titulo_filiais: "Filiais com maior compra fora da rede credenciada em {mes}"
+
+  # Nota de rodapé por filial da tabela acima. A filial marcada recebe um
+  # asterisco e a explicação sai logo abaixo.
+  # Formato:  CÓDIGO DA FILIAL: "explicação"
+  notas_filiais:
+    CWB (BASE): "o valor é compra de Arla a granel, feita fora da TruckPag por causa do volume. Não se trata de combustível comum."
+    ITR: "100% fora da rede. Fornecedor: Auto Posto W.U.G. Ltda. Sem posto credenciado nessa praça — é o mesmo fornecedor que atende a RVD."
+    RVD: "Fornecedor: Auto Posto W.U.G. Ltda, mesmo caso da ITR."
+    GOI: "Fornecedores: Gold Comércio de Combustíveis e Lubrificantes e 3 Trilhas Comércio de Derivados de Petróleo. Negociação em andamento."
+
+  subtitulo: "Por que ainda não chegamos a 100%"
+  topicos:
+    - titulo: "Parte do valor é Arla, não combustível."
+      texto: "O financeiro lança Arla dentro da mesma conta de combustível. Do total comprado fora da rede em {mes}, {mes_arla_pct} é Arla ({mes_arla}) — leitura importante antes de tratar o valor inteiro como diesel fora da TruckPag."
+    - titulo: "Rateio administrativo ficou fora da conta."
+      texto: "Lançamentos de rateio e da Referência não são abastecimento de frota e foram removidos deste acompanhamento, para que o valor represente apenas consumo atribuível às filiais operacionais."
+    - titulo: "Regiões sem posto disponível para credenciamento."
+      texto: "Em algumas praças existem apenas dois postos atendendo a região e nenhum dos dois aceita se credenciar à TruckPag, justamente porque conhecem a nossa dependência deles. Sem alternativa de abastecimento na rota, a compra direta é a única saída."
+    - titulo: "Postos onde o credenciamento custaria mais do que economiza."
+      texto: "Em um dos pontos utilizamos uma sala comercial cedida como cortesia pelo posto. Credenciar esse fornecedor significaria perder a cessão, o que hoje não é vantajoso para a empresa no balanço final."
+    - titulo: "O controle existe e o valor está medido."
+      texto: "Todo abastecimento fora da TruckPag é lançado por nota fiscal direta e entra no custo total do relatório. O acompanhamento é mensal, por filial e por fornecedor, para que nenhuma compra direta fique fora do custo por km."
+    - titulo: "Direção do trabalho."
+      texto: "Seguimos negociando o credenciamento das praças viáveis e monitorando as que não são. O objetivo é reduzir a compra direta ao mínimo estrutural, não a zero a qualquer custo."
+  observacoes: []
+
+# ------------------------------------------------------------
+pagina_13_proximos_passos:
   habilitada: true
   titulo: "Próximos passos"
-  itens:
-    - titulo: "Renegociação de tags e combustível."
-      texto: "Continuar as negociações com a TruckPag, a Rede Sim e a Rede Galo, buscando manter os valores sempre abaixo da referência ANP."
-    - titulo: "FKM Digital."
-      texto: "Finalizar o credenciamento dos postos restantes para alcançar 100% de cobertura no controle digital de abastecimento."
-    - titulo: "Controle de velocidade."
-      texto: "Intensificar o acompanhamento via rastreadores e os relatórios diários e semanais de excesso de velocidade, reduzindo multas e melhorando a média dos veículos."
-    - titulo: "Renovação de frota."
-      texto: "Manter o ritmo de renovação nos veículos acima de 200 mil km, priorizando os que concentram maior custo de manutenção."
-    - titulo: "Manutenção sob aprovação da Torre."
-      texto: "Ajustar os processos para que as manutenções só sejam realizadas após aprovação da Torre, sem interferir na disponibilidade do veículo para o roteiro."
-    - titulo: "Manutenção preventiva em problemas crônicos."
-      texto: "Antecipar manutenções preventivas nos problemas já identificados como crônicos, reduzindo a necessidade de manutenções corretivas."
+  # Os próximos passos DESTE mês. Enquanto estiver vazio, a página inteira
+  # não entra no PDF (não sai folha só com título).
+  #   - titulo: "Renovação de frota."
+  #     texto: "Priorizar os veículos acima de 200 mil km listados na página 9."
+  itens: []
   observacoes: []
 
 # ------------------------------------------------------------
 # ESPAÇO LIVRE DA TORRE
-# Apague os itens de exemplo e escreva os seus. Blocos ou itens
-# vazios simplesmente não são impressos.
+#
+# Escreva um item por linha, no formato:
+#     - titulo: "Título curto em negrito."
+#       texto: "A explicação, com número sempre que possível."
+#
+# Bloco sem item preenchido não é impresso. Se os três ficarem
+# vazios, a página inteira não entra no PDF.
+#
+# Números prontos para citar (lista completa no topo do arquivo):
+#   {mes_total} {mes_ckm} {var_total_sinal} {var_ckm_sinal}
+#   {ant_ckm_manutencao} {mes_ckm_manutencao} {var_ckm_manutencao_sinal}
+#   {filial_mais_cara} {filial_mais_barata} {top_concessionarias}
 # ------------------------------------------------------------
-pagina_12_observacoes_gerais:
+pagina_14_observacoes_gerais:
   habilitada: true
   titulo: "Observações da Torre de Controle — {mes} {ano}"
   blocos:
     - titulo: "O que melhoramos no mês"
-      itens:
-        - titulo: "Escreva aqui o ganho do mês."
-          texto: "Use número sempre que possível. Ex.: manutenção por km saiu de {ant_ckm_manutencao} para {mes_ckm_manutencao} ({var_ckm_manutencao_sinal})."
-        - titulo: ""
-          texto: ""
+      itens: []
 
     - titulo: "Ações em andamento"
-      itens:
-        - titulo: "Ação, responsável e prazo."
-          texto: "Uma linha por ação. Ex.: renegociação da tag TruckPag — Torre de Controle — fechamento previsto para o próximo mês."
-        - titulo: ""
-          texto: ""
+      itens: []
 
     - titulo: "Pontos de atenção"
-      itens:
-        - titulo: "Filiais fora da curva."
-          texto: "Ex.: {filial_mais_cara} é a filial com maior custo de combustível por km no mês. Registre o encaminhamento dado."
-        - titulo: ""
-          texto: ""
+      itens: []

@@ -23,8 +23,9 @@ from src.torre_layout import (
     MARGEM, MARROM, RAIZ, ROSA, TEXTO, TEXTO_SUAVE, VERDE, VERMELHO,
     VERMELHO_MEDIO, bloco_observacoes, caixa, cor_sobre, grafico, inteiro, interpolar,
     km_curto, linha, lista_topicos, marcador, meses_em_negrito, milhares,
-    moeda, montar_documento, nova_figura, pagina_observacoes_gerais,
-    paragrafo, pct, pct_sinal, quebrar, rotulos_em_negrito, secao,
+    moeda, moeda_cheia, moeda_k, moeda_milhar, montar_documento,
+    nova_figura, numero_br, pagina_observacoes_gerais, paragrafo, pct,
+    pct_sinal, quebrar, rotulos_em_negrito, rotulos_par_de_barras, secao, valor_km, valor_litro,
     separadores, texto, triangulo, variacao, y,
 )
 
@@ -120,7 +121,7 @@ def _pagina_2(c, d, cont, ctx):
 
     ax.plot(meses, valores, color=MARROM, linewidth=2, marker="o", markersize=6, zorder=3)
     for i, valor in enumerate(valores):
-        ax.text(i, valor + (max(valores) - min(valores)) * 0.12, f"R$ {valor / 1000:.3f}",
+        ax.text(i, valor + (max(valores) - min(valores)) * 0.12, valor_km(valor / 1000),
                 ha="center", fontsize=8, fontweight="bold", color=MARROM)
 
     separadores_bimestre(ax)
@@ -159,12 +160,12 @@ def _pagina_3(c, d, cont, ctx):
 
     topo_grafico = max(valores_b2 + valores_b3) * 1.35
     for i, (v2, v3) in enumerate(zip(valores_b2, valores_b3)):
-        ax.text(i - 0.2, v2 + topo_grafico * 0.02, f"R$ {v2:.3f}", ha="center",
+        ax.text(i - 0.2, v2 + topo_grafico * 0.02, valor_km(v2), ha="center",
                 fontsize=8, color=TEXTO_SUAVE)
-        ax.text(i + 0.2, v3 + topo_grafico * 0.02, f"R$ {v3:.3f}", ha="center",
+        ax.text(i + 0.2, v3 + topo_grafico * 0.02, valor_km(v3), ha="center",
                 fontsize=8, fontweight="bold", color=TEXTO)
         delta = (v3 / v2 - 1) * 100 if v2 else 0
-        ax.text(i + 0.2, v3 + topo_grafico * 0.10, f"({delta:+.1f}%)", ha="center",
+        ax.text(i + 0.2, v3 + topo_grafico * 0.10, f"({pct_sinal(delta)})", ha="center",
                 fontsize=8, fontweight="bold", color=VERDE if delta < 0 else VERMELHO)
 
     ax.set_xticks(posicoes)
@@ -182,10 +183,10 @@ def _pagina_3(c, d, cont, ctx):
          f"B3: {km_curto(b3['KM rodado total'])} km", False),
         ("LITROS CONSUMIDOS", f"B2: {milhares(b2['Litros consumidos'])} L",
          f"B3: {milhares(b3['Litros consumidos'])} L", False),
-        ("PREÇO MÉDIO DIESEL S10", f"B2: R$ {b2['Preço médio diesel S10']:.3f}/L",
-         f"B3: R$ {b3['Preço médio diesel S10']:.3f}/L", True),
-        ("CONSUMO MÉDIO FROTA", f"B2: {b2['Consumo médio (km/L)']:.2f} km/L",
-         f"B3: {b3['Consumo médio (km/L)']:.2f} km/L", False),
+        ("PREÇO MÉDIO DIESEL S10", f"B2: {valor_litro(b2['Preço médio diesel S10'])}",
+         f"B3: {valor_litro(b3['Preço médio diesel S10'])}", True),
+        ("CONSUMO MÉDIO FROTA", f"B2: {numero_br(b2['Consumo médio (km/L)'])} km/L",
+         f"B3: {numero_br(b3['Consumo médio (km/L)'])} km/L", False),
     ]
     largura_cartao = (LARGURA_UTIL - 3 * 10) / 4
     for i, (rotulo, linha_b2, linha_b3, destaque) in enumerate(indicadores):
@@ -203,7 +204,7 @@ def _pagina_3(c, d, cont, ctx):
     ax.plot(meses, precos, color=MARROM, linewidth=2, marker="o", markersize=5, zorder=3)
     ax.fill_between(range(len(meses)), precos, min(precos) * 0.97, color=MARROM, alpha=0.10)
     for i, preco in enumerate(precos):
-        ax.text(i, preco + (max(precos) - min(precos)) * 0.13, f"R$ {preco:.3f}/L",
+        ax.text(i, preco + (max(precos) - min(precos)) * 0.13, valor_litro(preco),
                 ha="center", fontsize=7.5, fontweight="bold", color=MARROM)
 
     separadores_bimestre(ax)
@@ -239,13 +240,7 @@ def _pagina_4(c, d, cont, ctx):
 
     topo_grafico = max(valores_b2 + valores_b3 + [1]) * 1.32
     for i, (v2, v3) in enumerate(zip(valores_b2, valores_b3)):
-        ax.text(i - 0.2, v2 + topo_grafico * 0.015, f"R$ {v2:.0f}K", ha="center",
-                fontsize=8, color=TEXTO_SUAVE)
-        ax.text(i + 0.2, v3 + topo_grafico * 0.015, f"R$ {v3:.0f}K", ha="center",
-                fontsize=8, fontweight="bold", color=TEXTO)
-        delta = (v3 / v2 - 1) * 100 if v2 else 0
-        ax.text(i + 0.2, v3 + topo_grafico * 0.085, f"({delta:+.1f}%)", ha="center",
-                fontsize=8, fontweight="bold", color=VERDE if delta < 0 else VERMELHO)
+        rotulos_par_de_barras(ax, i, v2, v3, topo_grafico)
 
     ax.set_xticks(posicoes)
     ax.set_xticklabels([k.replace(" de ", " de\n").replace(" e ", " e\n") for k in categorias],
@@ -265,7 +260,7 @@ def _pagina_4(c, d, cont, ctx):
 
     ax.barh(nomes, valores, color=MARROM, height=0.62)
     for i, valor in enumerate(valores):
-        ax.text(valor + max(valores) * 0.01, i, f" R$ {valor:.0f}K", va="center",
+        ax.text(valor + max(valores) * 0.01, i, f" {moeda_k(valor)}", va="center",
                 fontsize=8, color=TEXTO)
     ax.set_xlim(0, max(valores) * 1.16)
     ax.set_xlabel("R$ (milhares)", fontsize=8)
@@ -297,13 +292,7 @@ def _pagina_5(c, d, cont, ctx):
 
     topo_grafico = max(valores_b2 + valores_b3 + [1]) * 1.30
     for i, (v2, v3) in enumerate(zip(valores_b2, valores_b3)):
-        ax.text(i - 0.2, v2 + topo_grafico * 0.015, f"R$ {v2:.0f}K", ha="center",
-                fontsize=7.5, color=TEXTO_SUAVE)
-        ax.text(i + 0.2, v3 + topo_grafico * 0.015, f"R$ {v3:.0f}K", ha="center",
-                fontsize=7.5, fontweight="bold", color=TEXTO)
-        delta = (v3 / v2 - 1) * 100 if v2 else 0
-        ax.text(i + 0.2, v3 + topo_grafico * 0.085, f"({delta:+.1f}%)", ha="center",
-                fontsize=8, fontweight="bold", color=VERDE if delta < 0 else VERMELHO)
+        rotulos_par_de_barras(ax, i, v2, v3, topo_grafico)
 
     ax.set_xticks(posicoes)
     ax.set_xticklabels([k.replace(" ", "\n") for k in categorias], fontsize=8.5)
@@ -330,7 +319,7 @@ def _pagina_6(c, d, cont, ctx):
     fig, ax = nova_figura(525, 285)
     ax.bar(meses, valores, color=cores[:len(meses)], width=0.62)
     for i, (valor, passagem) in enumerate(zip(valores, passagens)):
-        ax.text(i, valor + max(valores) * 0.04, f"R$ {valor:.0f}K", ha="center",
+        ax.text(i, valor + max(valores) * 0.04, moeda_k(valor), ha="center",
                 fontsize=9, fontweight="bold", color=TEXTO)
         ax.text(i, valor - max(valores) * 0.045, inteiro(passagem), ha="center",
                 fontsize=7.5, fontweight="bold", color=cor_sobre(cores[i]))
@@ -377,14 +366,16 @@ def _pagina_7(c, d, cont, ctx):
     pagina = cont["pagina_7_pedagio_detalhe"]
     secao(c, 81, interpolar(pagina.get("titulo"), ctx))
 
-    concessionarias = d["quebras"]["pedagio_concessionaria"]
+    # A UF entra na segunda linha do rótulo: mostra em que rota o gasto ocorre
+    concessionarias = d["quebras"]["pedagio_concessionaria"][::-1]
     fig, ax = nova_figura(500, 215)
-    nomes = list(concessionarias.keys())[::-1]
-    valores = list(concessionarias.values())[::-1]
+    nomes = [f"{x['nome']}\n{x['ufs']}" if x.get("ufs") else x["nome"]
+             for x in concessionarias]
+    valores = [x["valor"] for x in concessionarias]
 
     ax.barh(nomes, valores, color=AZUL, height=0.6)
     for i, valor in enumerate(valores):
-        ax.text(valor + max(valores) * 0.01, i, f" R$ {inteiro(valor)}", va="center",
+        ax.text(valor + max(valores) * 0.01, i, f" {moeda_cheia(valor)}", va="center",
                 fontsize=7.5, color=TEXTO)
     ax.set_xlim(0, max(valores) * 1.2)
     ax.set_xlabel(f"R$ total no bimestre B3 ({d['meta']['bimestres']['B3']})", fontsize=8)
@@ -446,7 +437,7 @@ def _pagina_8(c, d, cont, ctx):
 
     ax.barh(nomes, valores, color=cores, height=0.68)
     for i, valor in enumerate(valores):
-        ax.text(valor + max(valores) * 0.008, i, f" R$ {valor:.3f}", va="center",
+        ax.text(valor + max(valores) * 0.008, i, f" {valor_km(valor)}", va="center",
                 fontsize=7.5, color=TEXTO)
 
     ax.set_xlim(0, max(valores) * 1.18)
@@ -458,9 +449,9 @@ def _pagina_8(c, d, cont, ctx):
 
     from matplotlib.patches import Patch
     ax.legend(handles=[
-        Patch(color=MARROM, label=f"Acima de R$ {limite_alto:.2f}/km"),
-        Patch(color=VERMELHO_MEDIO, label=f"R$ {limite_baixo:.2f} a R$ {limite_alto:.2f}/km"),
-        Patch(color=ROSA, label=f"Abaixo de R$ {limite_baixo:.2f}/km"),
+        Patch(color=MARROM, label=f"Acima de {valor_km(limite_alto, '/km')}"),
+        Patch(color=VERMELHO_MEDIO, label=f"{valor_km(limite_baixo)} a {valor_km(limite_alto, '/km')}"),
+        Patch(color=ROSA, label=f"Abaixo de {valor_km(limite_baixo, '/km')}"),
     ], loc="lower right", fontsize=7.5, frameon=False)
     fig.tight_layout()
     grafico(c, fig, MARGEM + 10, 112, 510, 560)
@@ -503,8 +494,8 @@ def _pagina_9(c, d, cont, ctx):
         texto(c, colunas[0][1], topo, filial["filial"][:22], 9, C_TEXTO)
         texto(c, colunas[1][1], topo, km_curto(filial["km_ref"]), 9, C_SUAVE)
         texto(c, colunas[2][1], topo, km_curto(filial["km_atual"]), 9, C_SUAVE)
-        texto(c, colunas[3][1], topo, f"R$ {filial['ckm_ref']:.3f}", 9, C_SUAVE)
-        texto(c, colunas[4][1], topo, f"R$ {filial['ckm_atual']:.3f}", 9, C_TEXTO, negrito=True)
+        texto(c, colunas[3][1], topo, valor_km(filial['ckm_ref']), 9, C_SUAVE)
+        texto(c, colunas[4][1], topo, valor_km(filial['ckm_atual']), 9, C_TEXTO, negrito=True)
         texto(c, colunas[5][1], topo, pct_sinal(filial["var"]), 9, cor_var, negrito=True)
         texto(c, colunas[6][1], topo, str(filial["placas"]), 9, C_TEXTO)
         topo += altura_linha
@@ -521,7 +512,7 @@ def _pagina_9(c, d, cont, ctx):
 
     total = [
         "TOTAL / MÉDIA", km_curto(b2["KM rodado total"]), km_curto(b3["KM rodado total"]),
-        f"R$ {b2['Custo/km combustível']:.3f}", f"R$ {b3['Custo/km combustível']:.3f}",
+        valor_km(b2['Custo/km combustível']), valor_km(b3['Custo/km combustível']),
         pct_sinal(var_total), str(sum(f["placas"] for f in filiais)),
     ]
     for (_, x), valor in zip(colunas, total):
@@ -589,8 +580,8 @@ def _pagina_10(c, d, cont, ctx):
 
         caixa(c, x, topo_cartoes, largura_cartao, 88, C_FUNDO, C_BORDA)
         texto(c, x + 16, topo_cartoes + 18, chave.upper(), 8, C_SUAVE)
-        texto(c, x + 16, topo_cartoes + 34, f"B2: R$ {valor_b2:.3f}/km", 8.5, C_SUAVE)
-        texto(c, x + 16, topo_cartoes + 60, f"R$ {valor_b3:.3f}/km", 17, C_TEXTO, negrito=True)
+        texto(c, x + 16, topo_cartoes + 34, f"B2: {valor_km(valor_b2, '/km')}", 8.5, C_SUAVE)
+        texto(c, x + 16, topo_cartoes + 60, valor_km(valor_b3, '/km'), 17, C_TEXTO, negrito=True)
         variacao(c, x + 16, topo_cartoes + 78, delta, sufixo=" vs B2", tamanho=9.5)
 
     bloco_observacoes(c, topo_cartoes + 108, pagina, ctx)
@@ -602,11 +593,11 @@ def _pagina_11(c, d, cont, ctx):
 
     meses = d["meta"]["meses"]
     linhas = [
-        ("Manutenção (R$K)", lambda m: inteiro(d["mensal"][m]["Manutenção total"] / 1000), False),
-        ("Combustível (R$K)", lambda m: inteiro(d["mensal"][m]["Combustível total"] / 1000), False),
-        ("Pedágio (R$K)", lambda m: inteiro(d["mensal"][m]["Pedágio total"] / 1000), False),
-        ("KM rodado (M)", lambda m: f"{d['mensal'][m]['KM rodado total'] / 1e6:.2f}", False),
-        ("Custo/km (R$)", lambda m: f"{d['mensal'][m]['Custo/km total']:.3f}", True),
+        ("Manutenção (R$K)", lambda m: numero_br(d["mensal"][m]["Manutenção total"] / 1000), False),
+        ("Combustível (R$K)", lambda m: numero_br(d["mensal"][m]["Combustível total"] / 1000), False),
+        ("Pedágio (R$K)", lambda m: numero_br(d["mensal"][m]["Pedágio total"] / 1000), False),
+        ("KM rodado (M)", lambda m: numero_br(d['mensal'][m]['KM rodado total'] / 1e6), False),
+        ("Custo/km (R$)", lambda m: numero_br(d['mensal'][m]['Custo/km total']), True),
     ]
 
     topo = 128
@@ -654,7 +645,7 @@ def _pagina_11(c, d, cont, ctx):
               C_MARROM, negrito=True)
         texto(c, x + 16, topo + 47, moeda(bim["Total operacional"]), 19, C_TEXTO, negrito=True)
         texto(c, x + 16, topo + 63, f"{km_curto(bim['KM rodado total'])} km rodados", 8.5, C_SUAVE)
-        texto(c, x + 16, topo + 82, f"R$ {bim['Custo/km total']:.3f}/km", 11, C_TEXTO, negrito=True)
+        texto(c, x + 16, topo + 82, valor_km(bim['Custo/km total'], '/km'), 11, C_TEXTO, negrito=True)
 
     bloco_observacoes(c, topo + 118, pagina, ctx)
 
@@ -673,15 +664,15 @@ def _pagina_12(c, d, cont, ctx):
     # Diesel e km rodado são contexto de mercado e de volume: mostramos a
     # direção em preto. Só custo/km e manutenção/km recebem verde ou vermelho.
     indicadores = [
-        ("DIESEL MÉDIO", f"B1: R$ {b1['Preço médio diesel S10']:.3f}/L",
-         f"B3: R$ {b3['Preço médio diesel S10']:.3f}/L",
+        ("DIESEL MÉDIO", f"B1: {valor_litro(b1['Preço médio diesel S10'])}",
+         f"B3: {valor_litro(b3['Preço médio diesel S10'])}",
          var["Preço médio diesel S10"], True),
         ("KM RODADO", f"B1: {km_curto(b1['KM rodado total'])}",
          f"B3: {km_curto(b3['KM rodado total'])}", var["KM rodado total"], True),
-        ("CUSTO/KM TOTAL", f"B1: R$ {b1['Custo/km total']:.3f}",
-         f"B3: R$ {b3['Custo/km total']:.3f}", var["Custo/km total"], False),
-        ("MANUTENÇÃO/KM", f"B1: R$ {b1['Custo/km manutenção']:.3f}",
-         f"B3: R$ {b3['Custo/km manutenção']:.3f}", var["Custo/km manutenção"], False),
+        ("CUSTO/KM TOTAL", f"B1: {valor_km(b1['Custo/km total'])}",
+         f"B3: {valor_km(b3['Custo/km total'])}", var["Custo/km total"], False),
+        ("MANUTENÇÃO/KM", f"B1: {valor_km(b1['Custo/km manutenção'])}",
+         f"B3: {valor_km(b3['Custo/km manutenção'])}", var["Custo/km manutenção"], False),
     ]
     largura_coluna = (LARGURA_UTIL - 40) / 4
     for i, (rotulo, linha_b1, linha_b3, delta, neutro) in enumerate(indicadores):
@@ -738,14 +729,14 @@ def montar_contexto(d):
             f"{nome}_manutencao": moeda(bim["Manutenção total"]),
             f"{nome}_combustivel": moeda(bim["Combustível total"]),
             f"{nome}_pedagio": moeda(bim["Pedágio total"]),
-            f"{nome}_manutencao_k": f"R$ {bim['Manutenção total'] / 1000:.0f}K",
+            f"{nome}_manutencao_k": moeda_milhar(bim['Manutenção total']),
             f"{nome}_km": km_curto(bim["KM rodado total"]),
             f"{nome}_litros": milhares(bim["Litros consumidos"]),
-            f"{nome}_ckm": f"R$ {bim['Custo/km total']:.3f}",
-            f"{nome}_ckm_combustivel": f"R$ {bim['Custo/km combustível']:.3f}",
-            f"{nome}_ckm_manutencao": f"R$ {bim['Custo/km manutenção']:.3f}",
-            f"{nome}_diesel": f"R$ {bim['Preço médio diesel S10']:.3f}",
-            f"{nome}_consumo": f"{bim['Consumo médio (km/L)']:.2f}",
+            f"{nome}_ckm": valor_km(bim['Custo/km total']),
+            f"{nome}_ckm_combustivel": valor_km(bim['Custo/km combustível']),
+            f"{nome}_ckm_manutencao": valor_km(bim['Custo/km manutenção']),
+            f"{nome}_diesel": moeda_cheia(bim['Preço médio diesel S10']),
+            f"{nome}_consumo": numero_br(bim['Consumo médio (km/L)']),
             f"{nome}_passagens": inteiro(bim["Número de passagens pedágio"]),
         })
 
@@ -776,7 +767,7 @@ def montar_contexto(d):
         "delta_pedagio": moeda(b3["Pedágio total"] - b2["Pedágio total"]),
     })
 
-    concessionarias = list(d["quebras"]["pedagio_concessionaria"].keys())
+    concessionarias = [x["nome"] for x in d["quebras"]["pedagio_concessionaria"]]
     ctx["top_concessionarias"] = ", ".join(concessionarias[:3]) if concessionarias else "—"
 
     pracas = d["quebras"]["pedagio_passagens"][:3]

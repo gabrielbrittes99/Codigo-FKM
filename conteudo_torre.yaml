@@ -12,7 +12,8 @@
 #    valores calculados. Exemplo:
 #       "O custo caiu {var_ckm}, de {b2_ckm} para {b3_ckm}."
 #    vira:
-#       "O custo caiu 7.1%, de R$ 1.249 para R$ 1.161."
+#       "O custo caiu 6,6%, de R$ 1,41 para R$ 1,32."
+#    Todo valor em reais sai com 2 casas e no padrão brasileiro.
 #
 # 2) Toda página tem um campo `observacoes:` — é o seu espaço
 #    para comentar aquela página (o que mudou, o que foi feito,
@@ -32,7 +33,7 @@
 #
 # Por bimestre (troque b1_ por b2_ ou b3_):
 #   {b1_total} {b1_manutencao} {b1_combustivel} {b1_pedagio}
-#   {b1_manutencao_k}  → em milhares (R$ 1468K)
+#   {b1_manutencao_k}  → em milhares (R$ 1.468,32K)
 #   {b1_km} {b1_litros} {b1_consumo} {b1_diesel} {b1_passagens}
 #   {b1_ckm}            → custo/km total
 #   {b1_ckm_combustivel} {b1_ckm_manutencao}
@@ -46,8 +47,8 @@
 #   {var_ckm_manutencao_b1}
 #
 # Toda variação existe em duas formas:
-#   {var_ckm}        → 6.6%    (sem sinal, para "caiu 6.6%")
-#   {var_ckm_sinal}  → -6.6%   (com sinal, para valores entre parênteses)
+#   {var_ckm}        → 6,6%    (sem sinal, para "caiu 6,6%")
+#   {var_ckm_sinal}  → -6,6%   (com sinal, para valores entre parênteses)
 #
 # Pedágio:    {delta_pedagio} {delta_passagens}
 #             {top_concessionarias} {top_pracas}
