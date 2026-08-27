@@ -49,7 +49,7 @@ Depois que os gestores de filial preenchem e devolvem a planilha FKM, salve os a
 python -m tools.validar_retorno_fkms
 ```
 
-Veja a seção "Auditoria e Validação" do [README.md](../README.md#%EF%B8%8F-auditoria-e-validação-de-fkms-retornados) para o que é checado. **Não use `tools/diagnostico_placa.py`** para investigar por que uma placa caiu em determinada filial — essa ferramenta está com lógica desatualizada (não considera mais `dbo.Movimentos`, que hoje é o mecanismo prioritário) e pode dar uma explicação errada. Ver [DEBITO_TECNICO_E_RISCOS.md](DEBITO_TECNICO_E_RISCOS.md).
+Veja a seção "Auditoria e Validação" do [README.md](../README.md#%EF%B8%8F-auditoria-e-validação-de-fkms-retornados) para o que é checado. (A ferramenta `tools/diagnostico_placa.py`, que dava explicações desatualizadas sobre alocação de placa, foi removida em 2026-08-27 — ver [DEBITO_TECNICO_E_RISCOS.md](DEBITO_TECNICO_E_RISCOS.md).)
 
 ## 5. Enviar e-mails às filiais
 

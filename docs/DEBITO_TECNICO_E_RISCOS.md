@@ -1,16 +1,16 @@
 # Débito Técnico e Riscos Conhecidos
 
 > Resultado de uma revisão completa do código feita em 2026-08-27, na saída do mantenedor original, para deixar registrado o que um novo responsável precisa saber antes de mexer no sistema. Itens organizados por impacto. Onde há número de linha, trate como aproximado — confirme pelo nome da função/constante, que é o que não muda.
+>
+> **Atualização (2026-08-27, mesma data): rodada de limpeza.** Vários itens abaixo marcados **✅ RESOLVIDO** foram corrigidos/removidos numa limpeza de código feita logo após esta auditoria. Mantidos aqui (em vez de apagados) como registro do que existia e por quê foi removido.
 
 ---
 
 ## 🔴 Alto risco — pode gerar dado errado sem nenhum aviso
 
-### 1. Docstring contradiz o código em `src/executar_manutencao.py`
+### 1. ✅ RESOLVIDO — Docstring contradizia o código em `src/executar_manutencao.py`
 
-`aplicar_excecoes_placa()` (linha ~70) tem a docstring *"DESABILITADO: Não usar exceções forçadas"*, mas o corpo da função **aplica ativamente** `EXCECOES_FORCADAS` + `EXCECOES_MANUTENCAO`, e a função **é chamada de fato** na geração real (linha ~322). Confirmado lendo o código: o comentário está errado, não o comportamento. Risco: um mantenedor novo lê o comentário, assume que a exceção não está em vigor, e toma uma decisão errada achando que o número de manutenção de uma placa não foi redirecionado quando na verdade foi.
-
-**Ação recomendada**: corrigir a docstring para refletir a realidade (ou decidir se o comportamento *deveria* mesmo estar desabilitado, e nesse caso desabilitar de verdade).
+`aplicar_excecoes_placa()` (linha ~70) tinha a docstring *"DESABILITADO: Não usar exceções forçadas"*, mas o corpo da função **aplicava ativamente** `EXCECOES_FORCADAS` + `EXCECOES_MANUTENCAO`, e a função **era chamada de fato** na geração real (linha ~322). Confirmado lendo o código antes da correção: o comentário estava errado, não o comportamento. Docstring corrigida em 2026-08-27 para descrever o que a função realmente faz.
 
 ### 2. Quatro mecanismos independentes e não sincronizados para forçar a filial de uma placa
 
@@ -25,17 +25,13 @@ Não existe um único lugar que decide "essa placa pertence a essa filial, sempr
 
 **Ação recomendada**: pelo menos documentar explicitamente os 4 lugares sempre que uma exceção for criada/removida; idealmente, consolidar em uma fonte única (ex.: uma tabela no banco que todos os mecanismos leem).
 
-### 3. Duas cópias divergentes do mapa nome-de-pasta-da-filial
+### 3. ✅ RESOLVIDO — Duas cópias divergentes do mapa nome-de-pasta-da-filial
 
-`tools/validar_retorno_fkms.py` tem `MAPA_FILIAIS_NOME_PASTA` com 35 entradas (a versão "canônica", mais recente — inclui Diretoria, Pelotas com nome alternativo, e Santa Maria/RIA). `tools/gerar_relatorio_validacao.py` mantém sua **própria cópia separada** com 32 entradas, **desatualizada** (sem Santa Maria/RIA, por exemplo — foi criada antes dessa filial existir). Se alguém usar `gerar_relatorio_validacao.py` para validar o FKM de uma filial que só existe no mapa mais novo, o mapeamento de pasta vai falhar silenciosamente ou cair num "não encontrado".
+`tools/validar_retorno_fkms.py` tinha `MAPA_FILIAIS_NOME_PASTA` com 35 entradas (a versão "canônica", mais recente). `tools/gerar_relatorio_validacao.py` mantinha sua **própria cópia separada** com 32 entradas, **desatualizada** (sem Santa Maria/RIA, por exemplo). Resolvido em 2026-08-27 removendo `tools/gerar_relatorio_validacao.py` inteiro (era uma versão Excel duplicada e não usada do auditor de retorno — `validar_retorno_fkms.py`, no terminal, é a versão em uso). Agora só existe uma cópia do mapa.
 
-**Ação recomendada**: extrair `MAPA_FILIAIS_NOME_PASTA` para um módulo compartilhado (ex.: dentro de `filial_mapping.py` ou um novo `filiais_constantes.py`) e importar dos dois lugares.
+### 4. ✅ RESOLVIDO — `tools/diagnostico_placa.py` estava desatualizado e podia enganar
 
-### 4. `tools/diagnostico_placa.py` está desatualizado e pode enganar
-
-Reimplementa manualmente a lógica antiga de alocação (moda de `FILIAL` + comparação temporal manutenção×combustível), que **não é mais** a lógica real do sistema. Hoje `aplicar_filial_manutencao()` em `filial_mapping.py` prioriza a consulta à tabela `dbo.Movimentos` do Bluefleet — e esta ferramenta nem consulta essa tabela. Rodar este diagnóstico hoje pode dar uma explicação **incorreta** de por que uma placa foi parar em determinada filial.
-
-**Ação recomendada**: reescrever para chamar a função real (`aplicar_filial_manutencao`) em vez de reimplementar a lógica à parte, ou aposentar a ferramenta com um aviso claro no topo do arquivo.
+Reimplementava manualmente a lógica antiga de alocação (moda de `FILIAL` + comparação temporal manutenção×combustível), que **não era mais** a lógica real do sistema — `aplicar_filial_manutencao()` em `filial_mapping.py` prioriza a consulta à tabela `dbo.Movimentos` do Bluefleet, e esta ferramenta nem consultava essa tabela. Removida em 2026-08-27 (não usada no fechamento nem nos PDFs; risco de dar explicação incorreta era maior que o benefício de manter).
 
 ### 5. `EXCECOES_FORCADAS` não está sendo zerada mensalmente, como o próprio comentário no código manda
 
@@ -49,17 +45,17 @@ Confirmado por busca em todo o repositório: nenhum arquivo `.py` lê `emails_fi
 
 ## 🟡 Médio — dívida técnica que não é bug ativo, mas custa tempo/confiança
 
-### 7. Camada "arquitetura limpa" parcialmente desconectada
+### 7. ✅ RESOLVIDO — Camada "arquitetura limpa" desconectada
 
-`src/extractors/excel_extractor.py` e `src/transformers/fuel_transformer.py` (+ `schemas.py`, com validação Pandera) são testados (`tests/test_transformers.py`) mas **não são chamados por nenhum script de produção**. Só `src/loaders/excel_loader.py` está de fato em uso (via `executar_resumos.py`). Um mantenedor novo pode assumir que essa é a forma "oficial" e mais robusta de tratar combustível — não é, ainda; o pipeline real usa outro caminho.
+`src/extractors/excel_extractor.py` e `src/transformers/fuel_transformer.py` (+ `schemas.py`, com validação Pandera) eram testados (`tests/test_transformers.py`) mas **não eram chamados por nenhum script de produção** — só `src/loaders/excel_loader.py` estava de fato em uso (via `executar_resumos.py`). Removidos por completo em 2026-08-27 (`src/extractors/`, `src/transformers/` e `tests/test_transformers.py`), já que confundiam mais do que ajudavam sem estar conectados ao pipeline real. `src/loaders/excel_loader.py` continua normalmente, é código de produção.
 
-### 8. `PLACA_EXCECAO = "TBU9D20"` é código morto
+### 8. ✅ Parcialmente resolvido — `PLACA_EXCECAO = "TBU9D20"` era código morto
 
-Definida em `src/filial_mapping.py` (linha ~448), não é referenciada em nenhum outro lugar da função. O tratamento genérico de filiais `REFERÊNCIA` hoje se aplica a todas as placas, sem carve-out especial — mas a mesma exceção "TBU9D20 pode ir para REFERÊNCIA CURITIBA" sobrevive, reimplementada de forma **independente**, em `tools/diagnostico_placa.py` (linhas ~101-107) e `tools/diagnostico_conferencia.py` (linhas ~191-202).
+Estava definida em `src/filial_mapping.py`, não era referenciada em nenhum outro lugar da função — removida em 2026-08-27. A mesma exceção "TBU9D20 pode ir para REFERÊNCIA CURITIBA", que estava reimplementada de forma independente em dois lugares, agora só sobrevive em um: `tools/diagnostico_conferencia.py` (linhas ~191-202) — a outra cópia, em `tools/diagnostico_placa.py`, foi removida junto com o arquivo (item 4).
 
 ### 9. Zero cobertura de teste nos módulos mais críticos
 
-`tests/` só cobre `src/loaders/excel_loader.py` e `src/transformers/fuel_transformer.py` — exatamente a camada menos usada em produção (item 7). **Sem nenhum teste**: `src/filial_mapping.py` (o módulo com mais regras e exceções do sistema todo), `src/frota_mapping.py`, `src/torre_dados.py` (toda a matemática de KPI — dias úteis, custo/km, detecção de sinistro), `src/gerar_relatorio_kpis.py`, os dois geradores de PDF, e todos os 16 arquivos de `tools/`.
+`tests/` hoje só cobre `src/loaders/excel_loader.py` (`tests/test_loaders.py`) — `tests/test_transformers.py` foi removido em 2026-08-27 junto com o código que testava (item 7), que não era usado em produção mesmo. **Sem nenhum teste**: `src/filial_mapping.py` (o módulo com mais regras e exceções do sistema todo), `src/frota_mapping.py`, `src/torre_dados.py` (toda a matemática de KPI — dias úteis, custo/km, detecção de sinistro), `src/gerar_relatorio_kpis.py`, os dois geradores de PDF, e todos os arquivos de `tools/`.
 
 ### 10. `DW_SCHEMA` no `.env` é uma variável vestigial
 
@@ -73,18 +69,26 @@ O README documenta `DW_SCHEMA=torre` no exemplo de `.env`, mas nenhum código l�
 
 `tools/validar_fechamento.py` usa seus próprios limiares (litragem > 600L, salto de hodômetro > 4000km) para checagens conceitualmente equivalentes às que `src/torre_dados.py` faz com outros números (`LIMITE_PERCORRIDO=50000`, `LIMITE_DIAS_GAP=45`). Não é necessariamente um bug — pode ser intencional (contextos diferentes) — mas vale confirmar com quem decidiu esses números originalmente, porque hoje não há comentário explicando a diferença.
 
-### 13. Pequenos resquícios de código
+### 13. ✅ RESOLVIDO — Pequenos resquícios de código
 
-- `src/extrair_dados_bluefleet.py:119-121` — `return None` duplicado dentro do `except` de `extrair_manutencao()`. Inofensivo, mas indica edição apressada.
-- `tests/test_transformers.py:64-67` — a mesma chave `"Litragem": [-10]` repetida 3x no mesmo dict literal. Só a última atribuição vale; inofensivo, mas confuso de ler.
+- `src/extrair_dados_bluefleet.py` — `return None` duplicado dentro do `except` de `extrair_manutencao()`. Corrigido em 2026-08-27.
+- `tests/test_transformers.py` — chave repetida num dict literal de teste. Arquivo inteiro removido junto com o código não usado que testava (item 7).
 
 ---
 
 ## 🟢 Organização e limpeza (baixo risco, fácil de resolver)
 
-### 14. Scripts de depuração pontual na raiz
+### 14. ✅ RESOLVIDO — Scripts de uso único removidos
 
-`debug_fln.py`, `debug_formato.py`, `debug_formato2.py` foram criados para investigar um incidente específico (retorno do FKM de Florianópolis em Abril/2026) e hardcodam caminhos e índices de aba daquele arquivo exato. Não fazem parte do conjunto de ferramentas mantidas, não importam nada de `src/`, e não têm mais utilidade agora que o incidente foi resolvido. Já estão no `.gitignore` (não serão commitados); seguro apagar fisicamente quando quiser.
+Removidos em 2026-08-27, todos confirmados sem nenhuma referência cruzada no resto do código antes da remoção:
+
+- `debug_fln.py`, `debug_formato.py`, `debug_formato2.py` (raiz) — investigação pontual do retorno do FKM de Florianópolis em Abril/2026, com caminhos e índice de aba daquele arquivo específico hardcoded.
+- `tools/consulta_rapida.py` — caminho absoluto e lista de placas hardcoded, script de investigação descartável.
+- `tools/diagnostico_cobertura_b1.py` — auditoria de backfill do 1º semestre/2026, uso único, já concluída.
+- `tools/gerar_relatorio_extra.py` — relatório filtrado para 28 placas específicas de um pedido pontual de stakeholder, não genérico.
+- `tools/gerar_relatorio_validacao.py` e `tools/diagnostico_placa.py` — ver itens 3 e 4.
+
+Se algum desses fizer falta, o histórico do git preserva o conteúdo (`git log --diff-filter=D -- <caminho>`).
 
 ### 15. Pasta solta `dados/0626 - RETORNADAS/`
 

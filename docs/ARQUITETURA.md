@@ -119,11 +119,11 @@ Usado só por `src/enviar_emails.py`.
 
 - **`src/enviar_emails.py`** — lê destinatários de `torre.email_gritsch_filiais` (não do CSV — ver aviso acima), anexa todos os `.xlsx` da pasta de cada filial em `Dados Tratados/[Mês Ano]/[Filial]/`.
 
-### Camada "arquitetura limpa" parcialmente desconectada
+### Camada de carga do Excel
 
-- **`src/extractors/excel_extractor.py`**, **`src/loaders/excel_loader.py`**, **`src/transformers/fuel_transformer.py`** + **`schemas.py`** (validação via Pandera) — parecem o início de uma refatoração para uma arquitetura em camadas (extract/transform/load) mais testável.
-  - `excel_loader.py` **está em produção de fato**: `preparar_resumos()`/`salvar_resumos_filial_excel()` são chamadas por `src/executar_resumos.py` e geram o Excel real de combustível por filial.
-  - `excel_extractor.py` e `fuel_transformer.py` **não são usados por nenhum script de produção** — `transformar_dados_combustivel()` só é chamado dentro de `tests/test_transformers.py`. São testados, mas não conectados ao pipeline real (`fechar_mes.py` não os invoca). Um mantenedor novo pode assumir por engano que essa é a forma "oficial" de tratar combustível — não é, ainda.
+- **`src/loaders/excel_loader.py`** — `preparar_resumos()`/`salvar_resumos_filial_excel()`, chamadas por `src/executar_resumos.py`, geram o Excel real de combustível por filial (abas Dados Brutos/Combustível/Arla/Resumo por Posto).
+
+> Havia também `src/extractors/` e `src/transformers/` (com validação Pandera), início de uma arquitetura em camadas mais testável, mas nunca conectada ao pipeline real — foram removidos numa limpeza em 2026-08-27 (ver [DEBITO_TECNICO_E_RISCOS.md, item 7](DEBITO_TECNICO_E_RISCOS.md#7--resolvido--camada-arquitetura-limpa-desconectada)).
 
 ### Ferramentas em `tools/`
 
@@ -137,17 +137,16 @@ Usado só por `src/enviar_emails.py`.
 **Diagnóstico e auditoria pontual**:
 - `diagnostico_conferencia.py` — 4 checagens de qualidade (garagem×filial divergente, REFERÊNCIA indevida, veículo multi-filial, hodômetro suspeito).
 - `validar_fechamento.py` — anomalias de litragem/hodômetro/duplicidade (limiares próprios, diferentes dos de `torre_dados.py` — ver Débito Técnico).
-- `gerar_relatorio_validacao.py` — versão Excel do auditor de retorno (mantém uma cópia própria e **desatualizada** do mapa de nomes de filial).
 - `gerar_relatorio_informativos.py` — abas "Veículos para Venda" e "Referência".
 - `restaurar_backups.py` — restaura `.bak` em `dados/retornados/`.
-- **`diagnostico_placa.py` — ⚠️ desatualizado.** Reimplementa manualmente a lógica antiga de alocação (moda de FILIAL + comparação temporal) que **não é mais** a lógica real (`aplicar_filial_manutencao()` hoje prioriza `dbo.Movimentos`, que esta ferramenta nem consulta). Rodar este diagnóstico hoje pode explicar errado por que uma placa foi para determinada filial.
+- `analisar_datas_placa.py`, `consulta_custos_placas.py` — consultas ad hoc reutilizáveis (já usam `config.py` para achar os arquivos do mês, não hardcoded).
 
-**Uso único / scripts de investigação pontual** (não fazem parte do conjunto mantido, seguros para revisar antes de reusar): `analisar_datas_placa.py`, `consulta_custos_placas.py`, `consulta_rapida.py`, `diagnostico_cobertura_b1.py`, `gerar_relatorio_extra.py`. Detalhes de cada um em [DEBITO_TECNICO_E_RISCOS.md](DEBITO_TECNICO_E_RISCOS.md).
+> Numa limpeza em 2026-08-27 foram removidos por não fazerem parte do fechamento nem dos PDFs e serem uso único ou desatualizados: `gerar_relatorio_validacao.py` (duplicava `validar_retorno_fkms.py` com um mapa de filiais divergente), `diagnostico_placa.py` (dava explicação desatualizada/incorreta sobre alocação de placa), `consulta_rapida.py`, `diagnostico_cobertura_b1.py` e `gerar_relatorio_extra.py`. Detalhes em [DEBITO_TECNICO_E_RISCOS.md](DEBITO_TECNICO_E_RISCOS.md).
 
 ---
 
 ## Testes
 
-- `tests/test_loaders.py` e `tests/test_transformers.py` cobrem só a camada `loaders/`/`transformers/` descrita acima — e, como visto, só `excel_loader.py` está de fato em produção.
-- **Sem nenhum teste automatizado**: `src/filial_mapping.py` (o módulo com mais exceções e mais crítico do sistema), `src/frota_mapping.py`, `src/torre_dados.py` (toda a matemática de KPI), `src/gerar_relatorio_kpis.py`, os dois geradores de PDF, `src/torre_layout.py`, `src/executar_frota.py`/`executar_manutencao.py`/`executar_resumos.py`, `src/enviar_emails.py`, `src/extrair_dados_bluefleet.py`, `src/config.py`, e todos os 16 arquivos de `tools/`.
+- `tests/test_loaders.py` cobre a camada `src/loaders/excel_loader.py` descrita acima, que é código de produção real.
+- **Sem nenhum teste automatizado**: `src/filial_mapping.py` (o módulo com mais exceções e mais crítico do sistema), `src/frota_mapping.py`, `src/torre_dados.py` (toda a matemática de KPI), `src/gerar_relatorio_kpis.py`, os dois geradores de PDF, `src/torre_layout.py`, `src/executar_frota.py`/`executar_manutencao.py`/`executar_resumos.py`, `src/enviar_emails.py`, `src/extrair_dados_bluefleet.py`, `src/config.py`, e todos os arquivos de `tools/`.
 - Rodar os testes existentes: `pytest` (configurado via `pyproject.toml`, `testpaths = ["tests"]`).
