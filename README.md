@@ -213,19 +213,41 @@ O sistema gera relatórios executivos de alto nível em formato PDF com gráfico
 
 > ⚡ **Aceleração por Cache:** A primeira execução salva o cache dos bancos em `dados/cache/`. As execuções subsequentes rodam em poucos segundos. Use a flag `--sem-cache` para forçar atualização no banco.
 
+### **Textos, observações e ações**
+
+Os números vêm dos bancos; os textos ficam em [`conteudo_mensal.yaml`](file:///home/gabriel/Projetos/codigo-FKM/conteudo_mensal.yaml) e [`conteudo_torre.yaml`](file:///home/gabriel/Projetos/codigo-FKM/conteudo_torre.yaml):
+
+- **`observacoes:`** — existe em toda página, para comentar aquele gráfico. Vazio, o box não é impresso.
+- **Última página** — espaço livre com blocos para *o que melhoramos*, *ações em andamento* e *pontos de atenção*.
+- **`habilitada: false`** — remove a página do PDF.
+- **`{placeholders}`** — trocados pelos valores calculados. Ex.: `"O custo por km ficou em {mes_ckm}, {var_ckm_sinal} vs {mes_anterior}."` vira `"O custo por km ficou em R$ 1,24, -2,4% vs Junho."` A lista completa está comentada no topo de cada YAML.
+
+### **Formato dos números**
+
+Todo valor monetário sai com **2 casas decimais no padrão brasileiro** (`R$ 1.234,56`). A formatação é centralizada em [`src/torre_layout.py`](file:///home/gabriel/Projetos/codigo-FKM/src/torre_layout.py) — nunca formate no meio do código, use os helpers:
+
+| Helper | Saída | Onde usar |
+| :--- | :--- | :--- |
+| `moeda()` | `R$ 2,94M` / `R$ 684,24K` | Cards e rótulos curtos (escala automática) |
+| `moeda_cheia()` | `R$ 2.941.567,89` | Valor completo, sem escala |
+| `moeda_k()` | `R$ 1.212,45K` | Rótulo de gráfico cujo eixo já está em milhares |
+| `valor_km()` | `R$ 1,24/km` | Custo por quilômetro |
+| `valor_litro()` | `R$ 6,42/L` | Preço do diesel |
+| `numero_br()` | `1.212,45` | Coluna de tabela, sem o símbolo |
+
+Para mudar a quantidade de casas em todo o relatório, altere `CASAS_MOEDA` em `torre_layout.py`.
+
 ---
 
 ## 📧 Disparo Automático de E-mails para Gestores
 
-Após a validação dos arquivos, você pode enviar automaticamente o kit de fechamento para cada filial (cadastradas no `dados/emails_filiais.csv`):
+Após a validação dos arquivos, você pode enviar automaticamente o kit de fechamento para cada filial:
 
 ```bash
-# Enviar e-mails para todas as filiais
 python -m src.enviar_emails
-
-# Modo de teste (envia apenas para um e-mail de teste)
-python -m src.enviar_emails --teste seu-email@gritsch.com.br
 ```
+
+> ⚠️ **Os destinatários NÃO vêm do arquivo `dados/emails_filiais.csv`.** Esse CSV é mantido manualmente como referência humana, mas o script lê a lista real de destinatários (e-mail, cópia, ativo/inativo) diretamente da tabela **`torre.email_gritsch_filiais`** no PostgreSQL (DW). Para adicionar/trocar um destinatário, é preciso dar `UPDATE`/`INSERT` **nessa tabela** — editar só o CSV não tem nenhum efeito no envio real. Vale manter o CSV atualizado mesmo assim, como registro legível para humanos, mas sincronizando manualmente com o banco. Não existe flag `--teste`; o script sempre envia para os destinatários ativos cadastrados no banco.
 
 ---
 
