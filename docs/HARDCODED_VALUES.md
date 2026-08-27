@@ -1,3 +1,5 @@
+> 🗄️ **ARQUIVADO (revisão de 2026-08-27).** Este documento é uma auditoria pontual de Abril/2026 e está desatualizado: os valores concretos abaixo (contagens, linhas, arquivos citados) já não batem com o código atual — por exemplo `EXCECOES_FORCADAS` tinha 20 entradas então, hoje tem ~34, quase todas com destino diferente. Mantido como histórico/exemplo do tipo de auditoria a repetir. **A lista viva e atualizada de riscos e valores hardcoded é [DEBITO_TECNICO_E_RISCOS.md](DEBITO_TECNICO_E_RISCOS.md).**
+
 # Valores Hardcoded - Referência para Validação
 
 ## 📍 Alocação de Recursos - src/filial_mapping.py

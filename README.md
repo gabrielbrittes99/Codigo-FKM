@@ -15,6 +15,7 @@ Sistema automatizado de alta precisão para **extração, tratamento, rateio tem
 - [📧 Disparo Automático de E-mails para Gestores](#-disparo-automático-de-e-mails-para-gestores)
 - [🔧 Mapeamentos Especiais e Exceções](#-mapeamentos-especiais-e-exceções)
 - [❓ Troubleshooting e Solução de Problemas](#-troubleshooting-e-solução-de-problemas)
+- [📚 Documentação de Handoff](#-documentação-de-handoff)
 
 ---
 
@@ -278,3 +279,9 @@ sudo apt-get install -y msodbcsql18
 ### **3. Dúvidas ou Suporte**
 - **Equipe:** Engenharia de Dados & Torre de Controle FKM — GRITSCH
 - **Versão:** 2.0.0 (Julho/2026)
+
+---
+
+## 📚 Documentação de Handoff
+
+Revisão completa do projeto feita em 2026-08-27. Para arquitetura detalhada, runbook operacional passo a passo, débito técnico/riscos conhecidos, dicionário de dados e checklist de acessos, veja o índice em [`docs/README.md`](docs/README.md).

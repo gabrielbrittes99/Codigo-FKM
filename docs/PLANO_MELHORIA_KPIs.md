@@ -1,3 +1,5 @@
+> ✅ **STATUS (revisão de 2026-08-27): implementado quase por completo.** Confirmado lendo `src/gerar_relatorio_kpis.py` — as 10 abas existem, incluindo `src/frota_mapping.py` criado conforme especificado aqui. Faltam apenas: (1) na Aba 1, a linha "Veículos sem Custo no Período" é calculada mas nunca escrita no Excel; (2) na Aba 9 (Ranking Postos), as seções D (tabela pivô Posto × Tipo de Combustível) e E (insights de melhor/pior preço) não foram implementadas — só A, B e C existem. Detalhes em [DEBITO_TECNICO_E_RISCOS.md](DEBITO_TECNICO_E_RISCOS.md#17-docsplano_melhoria_kpismd--já-implementado-quase-por-completo). O plano abaixo fica como registro histórico do que foi pedido.
+
 # Plano de Melhoria do Relatorio de KPIs
 ## Combustivel e Manutencao - Gritsch Transportes
 
