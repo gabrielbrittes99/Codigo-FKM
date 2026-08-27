@@ -1,29 +1,30 @@
 Filial,Nome_Exibicao,Responsavel,Email,Cc
-GRITSCH - BLN,Blumenau,Helder Santos,blumenau@gritsch.com.br,sandro@gritsch.com.br;alan.chimenes@gritsch.com.br;torredecontrole@gritsch.com.br
-GRITSCH - BSB,Brasília,Andre Moreira,brasilia@gritsch.com.br,ely@gritsch.com.br;torredecontrole@gritsch.com.br
-GRITSCH - CGR,Campo Grande,Weverton Nascimento,campogrande@gritsch.com.br,ely@gritsch.com.br;torredecontrole@gritsch.com.br
-GRITSCH - CSC,Cascavel,Alvonei Leandro,cascavel@gritsch.com.br,clovis@gritsch.com.br;torredecontrole@gritsch.com.br
-GRITSCH - CXJ,Caxias do Sul,Helder Souza,caxiasdosul@gritsch.com.br,alex@gritsch.com.br;torredecontrole@gritsch.com.br
-GRITSCH - CHA,Chapecó,Adriano Lavall,chapeco@gritsch.com.br,helder.santos@gritsch.com.br;torredecontrole@gritsch.com.br
-GRITSCH - CRI,Criciúma,Wesley Batista / Helder Santos,criciuma@gritsch.com.br,sandro@gritsch.com.br;torredecontrole@gritsch.com.br
-GRITSCH - CGB,Cuiabá,Edeni Silva,cuiaba@gritsch.com.br,ely@gritsch.com.br;torredecontrole@gritsch.com.br
-GRITSCH - CWB BASE,Curitiba (Base),Adilson / Anderson Alves / admcwb,adilson@gritsch.com.br;anderson.alves@gritsch.com.br;admcwb@gritsch.com.br,torredecontrole@gritsch.com.br
+GRITSCH - BLN,Blumenau,Helder Santos,blumenau@gritsch.com.br;helder.santos@gritsch.com.br,sandro@gritsch.com.br;alan.chimenes@gritsch.com.br;torredecontrole@gritsch.com.br
+GRITSCH - BSB,Brasília,Andre Moreira,brasilia@gritsch.com.br;andre.moreira@gritsch.com.br,ely@gritsch.com.br;torredecontrole@gritsch.com.br
+GRITSCH - CGR,Campo Grande,Weverton Nascimento,campogrande@gritsch.com.br;weverton.nascimento@gritsch.com.br,ely@gritsch.com.br;torredecontrole@gritsch.com.br
+GRITSCH - CSC,Cascavel,Clovis Cunha,cascavel@gritsch.com.br,clovis@gritsch.com.br;torredecontrole@gritsch.com.br
+GRITSCH - CXJ,Caxias do Sul,Helder Souza,caxiasdosul@gritsch.com.br;helder.souza@gritsch.com.br,helen.biano@gritsch.com.br;torredecontrole@gritsch.com.br
+GRITSCH - CHA,Chapecó,Adriano Lavall,chapeco@gritsch.com.br;adriano.lavall@gritsch.com.br,helder.santos@gritsch.com.br;torredecontrole@gritsch.com.br
+GRITSCH - CRI,Criciúma,Wesley Batista / Helder Santos,criciuma@gritsch.com.br;helder.santos@gritsch.com.br,sandro@gritsch.com.br;torredecontrole@gritsch.com.br
+GRITSCH - CGB,Cuiabá,Edeni Silva,cuiaba@gritsch.com.br;edeni.silva@gritsch.com.br,ely@gritsch.com.br;torredecontrole@gritsch.com.br
+GRITSCH - CWB BASE,Curitiba (Base),Anderson Alves,curitiba@gritsch.com.br;anderson.alves@gritsch.com.br,adilson@gritsch.com.br;torredecontrole@gritsch.com.br
 GRITSCH - CWB DIR,Curitiba (Diretoria),Fabio Pepplow,fabio.pepplow@gritsch.com.br,torredecontrole@gritsch.com.br
-GRITSCH - CTB,Curitibanos,,curitibanos@gritsch.com.br,sandro@gritsch.com.br;torredecontrole@gritsch.com.br
-GRITSCH - FLN,Florianópolis,Mateus Santos,florianopolis@gritsch.com.br,sandro@gritsch.com.br;torredecontrole@gritsch.com.br
-GRITSCH - GOI,Goiânia,,goiania@gritsch.com.br,ely@gritsch.com.br;torredecontrole@gritsch.com.br
-GRITSCH - GPA,Guarapuava,Elisson,guarapuava@gritsch.com.br,clovis@gritsch.com.br;torredecontrole@gritsch.com.br
-GRITSCH - ITR,Itumbiara,,itumbiara@gritsch.com.br,ely@gritsch.com.br;torredecontrole@gritsch.com.br
-GRITSCH - JOI,Joinville,Rudimar Bueno,joinville@gritsch.com.br,helder.santos@gritsch.com.br;torredecontrole@gritsch.com.br
-GRITSCH - LDB,Londrina,Everton Santos,londrina@gritsch.com.br,clovis@gritsch.com.br;carlos.kozan@gritsch.com.br;torredecontrole@gritsch.com.br
-GRITSCH - MGA,Maringá,Ricardo Navarrete,maringa@gritsch.com.br,clovis@gritsch.com.br;torredecontrole@gritsch.com.br
-GRITSCH - PET,Pelotas,William Ferreira,pelotas@gritsch.com.br;william.ferreira@gritsch.com.br,helder.santos@gritsch.com.br;sandro@gritsch.com.br;torredecontrole@gritsch.com.br
-GRITSCH - PMW,Palmas,,palmas@gritsch.com.br,ely@gritsch.com.br;torredecontrole@gritsch.com.br
-GRITSCH - PBC,Pato Branco,Jefferson Silva,patobranco@gritsch.com.br,clovis@gritsch.com.br;torredecontrole@gritsch.com.br
-GRITSCH - PGR,Ponta Grossa,Anderson Santos,pontagrossa@gritsch.com.br,clovis@gritsch.com.br;torredecontrole@gritsch.com.br
-GRITSCH - POA,Porto Alegre,Helder Souza,portoalegre@gritsch.com.br,alex@gritsch.com.br;torredecontrole@gritsch.com.br
-GRITSCH - RVD,Rio Verde,,rioverde@gritsch.com.br,ely@gritsch.com.br;torredecontrole@gritsch.com.br
-GRITSCH - RDN,Rondonópolis,Marcio Silva,rondonopolis@gritsch.com.br,ely@gritsch.com.br;torredecontrole@gritsch.com.br
-GRITSCH - SSA,Salvador,Cristiano Cruz,salvador@gritsch.com.br,torredecontrole@gritsch.com.br
-GRITSCH - SAO PERUS,São Paulo (Perus),Andressa Rocha / Adilson Carolino,saopaulo@gritsch.com.br,paulo.santana@gritsch.com.br;torredecontrole@gritsch.com.br
+GRITSCH - CTB,Curitibanos,Charles Barros / Helder Santos,curitibanos@gritsch.com.br;charles.barros@gritsch.com.br;helder.santos@gritsch.com.br,sandro@gritsch.com.br;torredecontrole@gritsch.com.br
+GRITSCH - FLN,Florianópolis,Mateus Santos / Helder Santos,florianopolis@gritsch.com.br;mateus.santos@gritsch.com.br;helder.santos@gritsch.com.br,sandro@gritsch.com.br;torredecontrole@gritsch.com.br
+GRITSCH - GOI,Goiânia,Ely Tagliaferro,goiania@gritsch.com.br,ely@gritsch.com.br;torredecontrole@gritsch.com.br
+GRITSCH - GPA,Guarapuava,Elisson,guarapuava@gritsch.com.br;elisson.santos@gritsch.com.br,clovis@gritsch.com.br;torredecontrole@gritsch.com.br
+GRITSCH - ITR,Itumbiara,Ely Tagliaferro,itumbiara@gritsch.com.br,ely@gritsch.com.br;torredecontrole@gritsch.com.br
+GRITSCH - JOI,Joinville,Rudimar Bueno,joinville@gritsch.com.br;rudimar.bueno@gritsch.com.br,helder.santos@gritsch.com.br;torredecontrole@gritsch.com.br
+GRITSCH - LDB,Londrina,Everton Santos,londrina@gritsch.com.br;everton@gritsch.com.br,clovis@gritsch.com.br;carlos.kozan@gritsch.com.br;torredecontrole@gritsch.com.br
+GRITSCH - MGA,Maringá,Ricardo Navarrete,maringa@gritsch.com.br;ricardo.navarrete@gritsch.com.br,clovis@gritsch.com.br;torredecontrole@gritsch.com.br
+GRITSCH - PET,Pelotas,William Ferreira,william.ferreira@gritsch.com.br,pelotas@gritsch.com.br;helder.santos@gritsch.com.br;sandro@gritsch.com.br;torredecontrole@gritsch.com.br
+GRITSCH - PMW,Palmas,Ely Tagliaferro,palmas@gritsch.com.br,ely@gritsch.com.br;torredecontrole@gritsch.com.br
+GRITSCH - PBC,Pato Branco,Jefferson Silva,patobranco@gritsch.com.br;jefferson.silva@gritsch.com.br,clovis@gritsch.com.br;torredecontrole@gritsch.com.br
+GRITSCH - PGR,Ponta Grossa,Anderson Santos,pontagrossa@gritsch.com.br;anderson.santos@gritsch.com.br,clovis@gritsch.com.br;torredecontrole@gritsch.com.br
+GRITSCH - POA,Porto Alegre,Helder Souza,portoalegre@gritsch.com.br;helder.souza@gritsch.com.br,alex@gritsch.com.br;torredecontrole@gritsch.com.br
+GRITSCH - RVD,Rio Verde,Wesley,rioverde@gritsch.com.br,ely@gritsch.com.br;torredecontrole@gritsch.com.br
+GRITSCH - RDN,Rondonópolis,Marcio Silva,rondonopolis@gritsch.com.br;marcio.silva@gritsch.com.br,ely@gritsch.com.br;torredecontrole@gritsch.com.br
+GRITSCH - SSA,Salvador,Cristiano Cruz,salvador@gritsch.com.br;cristiano.cruz@gritsch.com.br,torredecontrole@gritsch.com.br
+GRITSCH - SAO PERUS,São Paulo (Perus),Andressa Rocha / Adilson Carolino,saopaulo@gritsch.com.br;andressa.rocha@gritsch.com.br;Adilson.carolino@gritsch.com.br,paulo.santana@gritsch.com.br;torredecontrole@gritsch.com.br
 GRITSCH - SNO,Sinop,Whillian,sinop@gritsch.com.br,ely@gritsch.com.br;torredecontrole@gritsch.com.br
+GRITSCH - RIA,Santa Maria,,torredecontrole@gritsch.com.br,

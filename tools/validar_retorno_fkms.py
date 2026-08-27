@@ -48,6 +48,8 @@ MAPA_FILIAIS_NOME_PASTA = {
     "Gritsch São Paulo Perus": "GRITSCH - SAO PERUS",
     "Gritsch Sinop": "GRITSCH - SNO",
     "Gritsch Salvador": "GRITSCH - SSA",
+    "Gritsch Santa Maria": "GRITSCH - RIA",
+    "Gritsch RIA": "GRITSCH - RIA",
 }
 
 # Cores do terminal

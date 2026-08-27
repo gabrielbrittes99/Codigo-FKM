@@ -16,7 +16,6 @@ import pandas as pd
 # ATENÇÃO: ZERAR ESTE DICIONÁRIO A CADA NOVO FECHAMENTO MENSAL PARA EVITAR QUE REGRAS
 # ANTIGAS AFETEM OS DADOS DO MÊS ATUAL!
 EXCECOES_FORCADAS = {
-    "SFK1E50": "GRITSCH - POA",  # Julho/2026 - Ajuste manual
     "SDW8B50": "GRITSCH - RDN",  # Reatribuição / Rateio para Rondonópolis
     "RHE1F56": "GRITSCH - CWB (BASE)",  # Julho/2026 - Abastecimentos para CWB BASE
     "SEF8G22": "GRITSCH - CWB (BASE)",  # Julho/2026 - Abastecimentos para CWB BASE
@@ -41,6 +40,19 @@ EXCECOES_FORCADAS = {
     "SFI8F40": "GRITSCH - GOI",     # Julho/2026 - Ajuste manual (remover de GPA)
     "BEP1I25": "GRITSCH - CWB (BASE)", # Julho/2026 - Ajuste manual (remover de GPA)
     "SFI4A35": "GRITSCH - MGA",     # Julho/2026 - Ajuste manual Maringá
+    # ── Santa Maria (RIA) — Placas transferidas de POA a partir de Agosto/2026 ──
+    "UBH2J71": "GRITSCH - RIA",     # Agosto/2026 - CRISTHIAN
+    "UBR9B22": "GRITSCH - RIA",     # Agosto/2026 - IVO
+    "UBR9B09": "GRITSCH - RIA",     # Agosto/2026 - FABRICIO
+    "SEP6E34": "GRITSCH - RIA",     # Agosto/2026 - GUILHERME (Saveiro Reserva)
+    "UBR9B08": "GRITSCH - RIA",     # Agosto/2026 - MAURICIO
+    "UBR9A97": "GRITSCH - RIA",     # Agosto/2026 - RUI
+    "UBR9B27": "GRITSCH - RIA",     # Agosto/2026 - LUCIANO RIBAS
+    "UBR9A92": "GRITSCH - RIA",     # Agosto/2026 - TIAGO
+    "UBR9B16": "GRITSCH - RIA",     # Agosto/2026 - GILSON
+    "UCB4H75": "GRITSCH - RIA",     # Agosto/2026 - JOAO (3/4)
+    "SFK1E50": "GRITSCH - RIA",     # Agosto/2026 - LEANDRO (Toco)
+    "TAI9A24": "GRITSCH - RIA",     # Agosto/2026 - GUILHERME (Strada Alegrete - Envelopamento)
 }
 
 # Exceções exclusivas para MANUTENÇÃO (ajusta a filial de manutenção das placas)
@@ -484,25 +496,8 @@ def aplicar_filial_manutencao(
                 except:
                     id_trans = str(val_raw).split(".")[0].strip()
 
-        # Exceção específica para TAI9A24: Todos os custos vão para POA, EXCETO as 8 transações especificadas que seguem o fluxo normal
-        TRANSACOES_EXCLUIDAS_POA_TAI9A24 = {
-            "23954136", "23830001", "23780252", "23654547",
-            "23474206", "23332989", "23219488", "23175421"
-        }
-        if placa == "TAI9A24":
-            if id_col_real and pd.notna(row[id_col_real]):
-                try:
-                    id_t = str(int(float(row[id_col_real]))).strip()
-                except:
-                    id_t = str(row[id_col_real]).split(".")[0].strip()
-                if id_t in TRANSACOES_EXCLUIDAS_POA_TAI9A24:
-                    pass  # Não força POA, deixa seguir o fluxo normal/temporal abaixo
-                else:
-                    stats["excecao_forcada"] += 1
-                    return "GRITSCH - POA"
-            else:
-                stats["excecao_forcada"] += 1
-                return "GRITSCH - POA"
+        # TAI9A24 agora é tratada via EXCECOES_FORCADAS (→ GRITSCH - RIA)
+        # A exceção hardcoded anterior para POA foi removida em Agosto/2026.
 
         # PRIORIDADE 1: Exceções forçadas por placa
         if placa in EXCECOES_FORCADAS:
