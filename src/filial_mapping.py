@@ -445,8 +445,6 @@ def aplicar_filial_manutencao(
             df[coluna_data], dayfirst=True, format="mixed", errors="coerce"
         )
 
-    PLACA_EXCECAO = "TBU9D20"
-
     stats = {
         "total": 0,
         "excecao_forcada": 0,

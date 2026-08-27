@@ -69,8 +69,8 @@ def substituir_freguesia_por_perus(df, coluna="FILIAL"):
 
 def aplicar_excecoes_placa(df, coluna_filial="FILIAL", coluna_placa="Placa"):
     """
-    Aplica exceções forçadas de placas para filiais específicas
-    DESABILITADO: Não usar exceções forçadas
+    Aplica EXCECOES_FORCADAS e EXCECOES_MANUTENCAO (de src.filial_mapping) na
+    manutenção, redirecionando os registros de cada placa para a filial correta.
     """
     # Normalizar placa para busca (mantido para compatibilidade)
     if coluna_placa in df.columns:

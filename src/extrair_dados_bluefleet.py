@@ -118,7 +118,6 @@ def extrair_manutencao(mes_nome, ano):
     except Exception as e:
         print(f"❌ Erro ao extrair Manutenção do banco: {e}")
         return None
-        return None
 
 
 def extrair_frota():
