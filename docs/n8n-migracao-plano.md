@@ -481,11 +481,13 @@ TRUNCATE TABLE torre.combustivel_raw RESTART IDENTITY CASCADE;
 
 ## 5. Variáveis de Conexão (para configurar no n8n)
 
+> ⚠️ **Segurança:** usuário e senha NUNCA devem ficar neste arquivo (ele é versionado no git). Configure as credenciais reais como *credential* no próprio n8n ou em variáveis de ambiente do servidor. Peça o usuário/senha atuais para quem administra o PostgreSQL da Torre.
+
 | Variável | Valor |
 |----------|-------|
 | Host | 192.168.0.37 |
 | Porta | 5433 |
 | Database | dw |
 | Schema | torre |
-| Usuário | gabriel_brittes |
-| Senha | OKkK5yGSO6hxAU |
+| Usuário | *(ver .env / gestor do banco — não commitar aqui)* |
+| Senha | *(ver .env / gestor do banco — não commitar aqui)* |
