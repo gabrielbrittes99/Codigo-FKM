@@ -40,10 +40,17 @@ ENV/
 .DS_Store
 Thumbs.db
 
+# Metadado de download do Windows/WSL (Alternate Data Stream)
+*Zone.Identifier*
+
 # Arquivos temporários
 *.tmp
 *.temp
 ~$*
+
+# Cobertura de testes
+.coverage
+htmlcov/
 
 # Arquivos Excel de entrada (dados sensíveis)
 Combustivel*.xlsx
@@ -68,6 +75,17 @@ ajustes_placas.csv
 dados/retornados/*.xls
 dados/retornados/*.xlsx
 dados/retornados/*.bak
+dados/*RETORNADAS*/
+
+# Base histórica de fechamentos (dados sensíveis, arquivo pesado)
+dados/historico/
 
 # Extrações brutas dos bancos usadas pelo relatório da Torre
 dados/cache/
+
+# Relatórios PDF gerados (saída do pipeline, não código-fonte)
+Torre_Controle_*.pdf
+
+# Scripts de depuração pontual (não fazem parte das ferramentas mantidas)
+# Ver docs/DEBITO_TECNICO.md — seguros para apagar quando quiser.
+/debug_*.py
