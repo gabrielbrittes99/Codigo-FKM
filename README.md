@@ -193,8 +193,8 @@ python -m tools.validar_retorno_fkms
 ### **O que o Validador Audita:**
 - ✅ **Completude da Frota:** Garante que todos os veículos pertencentes à filial constam no FKM enviado.
 - 🚫 **Placas Extras/Erros de Digitação:** Identifica placas preenchidas incorretamente pelo gerente ou divergentes.
-- ⛽ **Valores de Combustível e Arla:** Compara os valores preenchidos contra os abastecimentos oficiais da TruckPag.
-- 💸 **Abastecimentos por Fora:** Valida postos externos liberados para filiais autorizadas (Ex: Goiânia, Rio Verde, Itumbiara, Palmas, Rondonópolis).
+- ⛽ **Valores de Combustível e Arla:** Compara os valores preenchidos contra os abastecimentos oficiais da TruckPag. Filiais com compra direta no mês (fora da TruckPag) não são reprovadas por valor "a maior" — a compra direta não tem placa associada no financeiro, então não dá pra conferir o valor exato linha a linha.
+- 💸 **Compra Direta do Mês (fora da TruckPag):** Não é mais uma auditoria — o relatório só lista, por filial, quanto teve de combustível e Arla comprado fora da TruckPag (informativo, para saber quem cobrar).
 - 🔧 **Manutenções e OSs Transferidas:** Alerta caso manutenções redirecionadas via exceção não tenham sido declaradas pelo gestor destino.
 
 ### **Resumo dos Status na Tela:**
