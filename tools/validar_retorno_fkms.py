@@ -61,27 +61,14 @@ CYAN = "\033[96m"
 BOLD = "\033[1m"
 RESET = "\033[0m"
 
-# Filiais com abastecimento por fora (não centralizado no prestador principal)
-# Usar os nomes como aparecem no FKM (sem siglas)
-FILIAIS_ABAST_POR_FORA = [
-    "Gritsch Itumbiara",
-    "Gritsch Goiânia",
-    "Gritsch Palmas",
-    "Gritsch Rio Verde",
-    "Gritsch Rondonópolis"
-]
-
-# Filiais com Arla por fora (compram Arla de fornecedor externo)
-FILIAIS_ARLA_POR_FORA = [
-    "Gritsch Curitiba"
-]
-
 # Filiais com manutenção por fora (fundo fixo, emergenciais sem NF)
 FILIAIS_MANUT_POR_FORA = [
     "Gritsch Rondonópolis"
 ]
 
 COLUNAS_COMB_PADRAO = ["Placa", "Litragem", "Valor total", "Combustivel", "Hodometro/Horimetro", "Hodometro/Horimetro anterior", "Data da transacao"]
+NOME_ABA_COMPRA_DIRETA = "Compra Direta (Fora TruckPag)"
+NOME_ABA_RESUMO_GERAL = "Resumo Geral"
 
 def _ler_combustivel_oficial(caminho_comb):
     # Filiais que passaram por tools.injetar_compra_direta ganham abas extras
@@ -95,6 +82,51 @@ def _ler_combustivel_oficial(caminho_comb):
     if "Placa" not in df.columns:
         return pd.DataFrame(columns=COLUNAS_COMB_PADRAO)
     return df
+
+
+def _compra_direta_info(caminho_comb):
+    """(tem_combustivel_fora, tem_arla_fora) para o mês, lendo a aba real
+    injetada por tools.injetar_compra_direta — em vez de uma lista fixa de
+    filiais, que fica desatualizada assim que a compra direta muda de filial
+    de um mês para o outro (caso real: Londrina, Sinop, Cuiabá e Porto Alegre
+    tiveram compra direta em Julho/2026 sem estar em nenhuma lista fixa)."""
+    if not os.path.exists(caminho_comb):
+        return False, False
+    xl = pd.ExcelFile(caminho_comb)
+    if NOME_ABA_COMPRA_DIRETA not in xl.sheet_names:
+        return False, False
+    df = xl.parse(NOME_ABA_COMPRA_DIRETA)
+    if "Natureza" not in df.columns:
+        return False, False
+    natureza = df[df["Natureza"].astype(str).str.upper() != "TOTAL COMPRA DIRETA"]["Natureza"].astype(str).str.upper()
+    tem_arla = natureza.str.contains("ARLA", na=False).any()
+    tem_combustivel = natureza.str.contains("COMBUST", na=False).any()
+    return bool(tem_combustivel), bool(tem_arla)
+
+
+def _resumo_geral_totais(caminho_comb):
+    """(total_truckpag, total_direta, total_real) da aba 'Resumo Geral' injetada
+    por tools.injetar_compra_direta, ou None se a filial não teve compra direta
+    no mês (arquivo sem essa aba)."""
+    if not os.path.exists(caminho_comb):
+        return None
+    xl = pd.ExcelFile(caminho_comb)
+    if NOME_ABA_RESUMO_GERAL not in xl.sheet_names:
+        return None
+    df = xl.parse(NOME_ABA_RESUMO_GERAL, header=None)
+    valores = {}
+    for _, row in df.iterrows():
+        rotulo = str(row.iloc[0]) if pd.notna(row.iloc[0]) else ""
+        valor = row.iloc[1] if len(row) > 1 else None
+        if pd.isna(valor):
+            continue
+        if "TruckPag" in rotulo:
+            valores["truckpag"] = float(valor)
+        elif "Compra direta" in rotulo:
+            valores["direta"] = float(valor)
+        elif "TOTAL REAL" in rotulo:
+            valores["total_real"] = float(valor)
+    return valores if "total_real" in valores else None
 
 def auditar_arquivo(caminho_fkm, mes_ano_fkm):
     erros = []
@@ -267,6 +299,7 @@ def auditar_arquivo(caminho_fkm, mes_ano_fkm):
     df_frota = pd.read_excel(caminho_frota) if os.path.exists(caminho_frota) else pd.DataFrame(columns=["Placa"])
     df_comb = _ler_combustivel_oficial(caminho_comb)
     df_manut = pd.read_excel(caminho_manut) if os.path.exists(caminho_manut) else pd.DataFrame(columns=["Placa", "ValorTotal"])
+    filial_abast_por_fora, filial_arla_por_fora = _compra_direta_info(caminho_comb)
     
     df_frota["Placa_Clean"] = df_frota["Placa"].astype(str).str.replace("-", "", regex=False).str.strip().str.upper()
     df_comb["Placa_Clean"] = df_comb["Placa"].astype(str).str.replace("-", "", regex=False).str.strip().str.upper()
@@ -382,7 +415,6 @@ def auditar_arquivo(caminho_fkm, mes_ano_fkm):
                 custos_manut_extra[r["Placa_Clean"]] = r["Manut_Source_Total"]
 
         # Verifica se alguma placa extra no FKM é parecida com alguma ausente da frota (possível typo do gerente)
-        filial_abast_por_fora = branch_name in FILIAIS_ABAST_POR_FORA
         for extra in extra_in_fkm:
             # Verificar se a placa extra tem custos oficiais (ou se a filial abastece por fora)
             c_info_extra = custos_comb_extra.get(extra, {"litros": 0.0, "valor": 0.0, "arla": 0.0})
@@ -452,6 +484,27 @@ def auditar_arquivo(caminho_fkm, mes_ano_fkm):
     # Substituir df_fkm pela versão agrupada para as validações seguintes
     df_fkm = df_fkm_grouped
 
+    # --- A2. Validação do total de compra direta (fora da TruckPag) ---
+    # A comparação por placa mais abaixo só pega "faltou uma placa inteira" —
+    # a compra direta é um valor de filial, sem placa associada, e pode ser
+    # somada em qualquer linha (ou em nenhuma). Por isso comparamos também o
+    # total do FKM inteiro contra o TOTAL REAL (TruckPag + Direta) da aba
+    # "Resumo Geral", senão uma compra direta parcial ou não declarada passa
+    # sem nenhum alerta.
+    resumo_direta = _resumo_geral_totais(caminho_comb)
+    if resumo_direta and resumo_direta.get("direta", 0.0) > 1.0:
+        total_fkm_declarado = float(df_fkm["Valor Comb."].sum()) + float(df_fkm["Arla"].sum())
+        total_real = resumo_direta["total_real"]
+        falta = total_real - total_fkm_declarado
+        if falta > 10.0:  # tolerância de arredondamento
+            erros.append(
+                f"Compra direta fora da TruckPag não coberta pelo FKM: a filial teve "
+                f"R$ {resumo_direta['direta']:,.2f} em compra direta este mês (aba "
+                f"'{NOME_ABA_COMPRA_DIRETA}' do arquivo oficial), mas o total declarado no FKM "
+                f"(R$ {total_fkm_declarado:,.2f}) fica R$ {falta:,.2f} abaixo do TOTAL REAL do mês "
+                f"(R$ {total_real:,.2f}). Confira se o gestor somou a compra direta em alguma placa."
+            )
+
     # Filtrar Arla em combustível oficial
     df_comb_arla = df_comb[df_comb["Combustivel"].str.contains("Arla", case=False, na=False)].groupby("Placa_Clean").agg(
         Arla_Liters_Source=("Litragem", "sum"),
@@ -473,8 +526,8 @@ def auditar_arquivo(caminho_fkm, mes_ano_fkm):
     
     # Identificar divergências significativas
     # Para filiais com abastecimento por fora, registrar diferenças sem gerar erro
-    filial_abast_por_fora = branch_name in FILIAIS_ABAST_POR_FORA
-    filial_arla_por_fora = branch_name in FILIAIS_ARLA_POR_FORA
+    # (filial_abast_por_fora / filial_arla_por_fora já calculados acima, a partir
+    # da aba real de Compra Direta do mês, não de uma lista fixa de filiais)
 
     for _, r in df_comp_comb.iterrows():
         placa = r["Placa_Clean"]
