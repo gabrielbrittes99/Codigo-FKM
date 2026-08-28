@@ -105,6 +105,7 @@ Usado só por `src/enviar_emails.py`.
 - **`src/executar_frota.py`** — gera "Frota - FILIAL.xlsx" por filial, com alocação histórica dentro do mês quando há transferência de veículo.
 - **`src/executar_resumos.py`** — gera "Combustível - FILIAL.xlsx" (via `src/loaders/excel_loader.py`, ver abaixo). Tem seu próprio mapa `MAPA_POSTOS_GERAL`/`MAPA_POSTOS_CSC` (posto→filial) e separa filiais `REFERÊNCIA*`/não-operacionais para um relatório à parte.
 - **`src/executar_manutencao.py`** — gera "Manutenção - FILIAL.xlsx". **Atenção**: `aplicar_excecoes_placa()` tem docstring dizendo "DESABILITADO: Não usar exceções forçadas", mas a função **aplica ativamente** `EXCECOES_FORCADAS` + `EXCECOES_MANUTENCAO` e é chamada de fato na geração (linha ~322). O comentário está errado, não o código — mas é fácil um novo mantenedor confiar no comentário e se confundir. Ver [DEBITO_TECNICO_E_RISCOS.md](DEBITO_TECNICO_E_RISCOS.md#risco-alto).
+- **`src/injetar_compra_direta.py`** — roda depois de frota/manutenção/combustível (etapa 5 de `fechar_mes.py`), quando a pasta de toda filial já existe. Lê `dbo.LancamentosComNaturezas` (mesma fonte de `torre_dados._extrair_combustivel_fora`) e injeta no "Combustivel - FILIAL.xlsx" oficial as abas "Compra Direta (Fora TruckPag)" e "Resumo Geral" (TruckPag + Direta = Total Real). Até 2026-08-28 vivia em `tools/` como passo manual opcional do runbook (`python -m tools.injetar_compra_direta --mes X --ano Y`); como `validar_retorno_fkms.py` só reconhece compra direta pela aba que este script gera, um mês em que alguém esquecesse de rodar o comando manual aprovava o FKM sem cobrar o valor — por isso virou etapa automática. Ver [DEBITO_TECNICO_E_RISCOS.md](DEBITO_TECNICO_E_RISCOS.md).
 - **`src/gerar_relatorio_kpis.py`** — Excel consolidado de 10 abas (Resumo Geral, Combustível por Tipo/Filial/Região, Manutenção por Natureza/Filial/GrupoDespesa, Custo por Placa, Ranking de Postos, Análise de Frota). Ver status de implementação em [`PLANO_MELHORIA_KPIs.md`](PLANO_MELHORIA_KPIs.md).
 
 ### Torre de Controle (relatórios executivos em PDF)
@@ -131,7 +132,6 @@ Usado só por `src/enviar_emails.py`.
 - `arquivar_mes.py` — arquiva o mês fechado em `dados/historico/`.
 - `validar_retorno_fkms.py` — auditor principal dos FKMs devolvidos pelas filiais (o mais robusto e completo).
 - `gerar_fkm_matriz.py` — caso especial da GRITSCH-MATRIZ (hub de trânsito).
-- `injetar_compra_direta.py` *(novo)* — injeta a aba de compra direta (fora TruckPag) no Excel oficial de cada filial.
 - `gerar_fkm_digital.py` — gera o `.xls` de FKM pré-preenchido por filial a partir de `modelos FKM/`.
 
 **Diagnóstico e auditoria pontual**:

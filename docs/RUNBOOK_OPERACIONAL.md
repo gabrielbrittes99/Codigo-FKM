@@ -25,23 +25,14 @@ Executa em sequência (para no primeiro erro):
 2. Resumos de combustível por filial.
 3. Resumos de manutenção por filial.
 4. Resumos de frota por filial.
-5. Relatório consolidado de KPIs (Excel de 10 abas).
+5. Injeção de compra direta (combustível/Arla comprado fora da rede credenciada TruckPag): consulta o financeiro (`dbo.LancamentosComNaturezas`) e, para toda filial que teve compra direta no mês, adiciona ao "Combustivel - FILIAL.xlsx" oficial as abas "Compra Direta (Fora TruckPag)" e "Resumo Geral" (TruckPag + Direta = Total Real) — sem isso, o FKM da filial não tem como saber que precisa declarar aquele valor. Roda automaticamente, para toda filial, todo mês — não precisa checar se "houve compra fora" antes de rodar. (Até 2026-08-28 era um passo manual e opcional em `tools/`, o que fazia a auditoria do passo 3 aprovar FKMs sem cobrar a compra direta quando alguém esquecia de rodar — ver [DEBITO_TECNICO_E_RISCOS.md](DEBITO_TECNICO_E_RISCOS.md).)
+6. Relatório consolidado de KPIs (Excel de 10 abas).
 
 Resultado: `Dados Tratados/[Mês Ano]/[Filial]/*.xlsx` para cada filial, mais o KPI consolidado na raiz da pasta do mês.
 
-> O envio de e-mail **não roda automaticamente** dentro de `fechar_mes.py` (está comentado no orquestrador) — é sempre um passo manual, depois da validação (passo 4 abaixo).
+> O envio de e-mail **não roda automaticamente** dentro de `fechar_mes.py` (está comentado no orquestrador) — é sempre um passo manual, depois da validação (passo 3 abaixo).
 
-## 3. Compra direta fora da TruckPag (se aplicável)
-
-Se houve compra de combustível fora da rede credenciada TruckPag no mês (ver página "Centralização TruckPag" do PDF mensal para saber quanto foi):
-
-```bash
-python -m tools.injetar_compra_direta
-```
-
-Isso adiciona a aba de compra direta no Excel oficial de cada filial afetada, para que o FKM feche batendo com o custo real.
-
-## 4. Aguardar e validar o retorno dos FKMs das filiais
+## 3. Aguardar e validar o retorno dos FKMs das filiais
 
 Depois que os gestores de filial preenchem e devolvem a planilha FKM, salve os arquivos em `dados/retornados/` e rode:
 
@@ -51,7 +42,7 @@ python -m tools.validar_retorno_fkms
 
 Veja a seção "Auditoria e Validação" do [README.md](../README.md#%EF%B8%8F-auditoria-e-validação-de-fkms-retornados) para o que é checado. (A ferramenta `tools/diagnostico_placa.py`, que dava explicações desatualizadas sobre alocação de placa, foi removida em 2026-08-27 — ver [DEBITO_TECNICO_E_RISCOS.md](DEBITO_TECNICO_E_RISCOS.md).)
 
-## 5. Enviar e-mails às filiais
+## 4. Enviar e-mails às filiais
 
 ```bash
 python -m src.enviar_emails
@@ -59,7 +50,7 @@ python -m src.enviar_emails
 
 > ⚠️ **Os destinatários vêm da tabela `torre.email_gritsch_filiais` no PostgreSQL (DW), não de `dados/emails_filiais.csv`.** Se precisar adicionar, trocar ou desativar um destinatário, faça isso **direto no banco** (`UPDATE`/`INSERT ... WHERE ativo = TRUE`). Atualizar só o CSV não muda nada no envio real — mas vale manter o CSV em sincronia mesmo assim, como referência legível para humanos.
 
-## 6. Gerar os PDFs executivos da Torre de Controle
+## 5. Gerar os PDFs executivos da Torre de Controle
 
 ```bash
 # Mensal — mês fechado vs mês anterior + acumulado do ano
@@ -73,7 +64,7 @@ Antes de gerar, escreva os textos e observações do mês em [`conteudo_mensal.y
 
 A primeira execução do mês salva cache dos bancos em `dados/cache/`; execuções seguintes rodam em segundos. Use `--sem-cache` para forçar releitura do banco se os números parecerem desatualizados.
 
-## 7. Arquivar o mês fechado
+## 6. Arquivar o mês fechado
 
 ```bash
 python -m tools.arquivar_mes
@@ -84,8 +75,7 @@ Move os arquivos de `dados/entrada/` e `dados/retornados/` para `dados/historico
 ## Checklist de fim de mês
 
 - [ ] `Dados Tratados/[Mês Ano]/` conferido e com todas as filiais presentes
-- [ ] FKMs retornados validados (`validar_retorno_fkms.py` sem rejeições pendentes)
-- [ ] Compra direta injetada, se houve
+- [ ] FKMs retornados validados (`validar_retorno_fkms.py` sem rejeições pendentes, incluindo compra direta)
 - [ ] E-mails enviados (destinatários corretos confirmados na tabela do banco, não só no CSV)
 - [ ] PDF mensal gerado e revisado (textos do YAML preenchidos, não deixados em branco/genéricos)
 - [ ] Mês arquivado em `dados/historico/`

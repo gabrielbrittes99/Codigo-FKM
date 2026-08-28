@@ -14,9 +14,18 @@ filial e escreve, no arquivo oficial já gerado pelo fechamento, uma aba
 "Compra Direta (Fora TruckPag)" com o detalhe (data, fornecedor, nota,
 natureza, valor) e uma aba "Resumo Geral" com TruckPag + Direta = Total Real.
 
-Uso:
-    python -m tools.injetar_compra_direta --mes 7 --ano 2026
-    python -m tools.injetar_compra_direta --mes 7 --ano 2026 --sem-cache
+Roda automaticamente como parte de `fechar_mes.py` (depois de frota/manutenção,
+para que a pasta de toda filial já exista — inclusive a que só tem compra
+direta e nenhum abastecimento TruckPag no mês, caso do ITR em Julho/2026).
+Antes vivia em `tools/` como passo manual e opcional do runbook; morando ali,
+ficava fácil de esquecer de rodar — e como `validar_retorno_fkms.py` só
+reconhece compra direta pela aba que este script gera, esquecer de rodar
+significava a auditoria aprovar o FKM sem cobrar o valor. Ver
+DEBITO_TECNICO_E_RISCOS.md para o histórico.
+
+Uso manual (reprocessar um mês específico fora da sequência normal):
+    python -m src.injetar_compra_direta --mes 7 --ano 2026
+    python -m src.injetar_compra_direta --mes 7 --ano 2026 --sem-cache
 """
 
 import argparse
@@ -295,8 +304,10 @@ def processar(mes, ano, usar_cache=True):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
         description="Injeta a compra direta de combustível nos arquivos oficiais do fechamento.")
-    parser.add_argument("--mes", type=int, required=True, help="Mês do fechamento (1-12).")
-    parser.add_argument("--ano", type=int, required=True)
+    parser.add_argument("--mes", type=int, default=int(config.obter_numero_mes()),
+                        help="Mês do fechamento (1-12). Padrão: o mês que fechar_mes.py está processando.")
+    parser.add_argument("--ano", type=int, default=int(config.ANO),
+                        help="Padrão: o ano que fechar_mes.py está processando.")
     parser.add_argument("--sem-cache", action="store_true",
                         help="Reconsulta o banco em vez de usar o cache salvo.")
     args = parser.parse_args()

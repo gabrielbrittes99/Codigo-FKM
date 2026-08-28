@@ -71,7 +71,7 @@ NOME_ABA_COMPRA_DIRETA = "Compra Direta (Fora TruckPag)"
 NOME_ABA_RESUMO_GERAL = "Resumo Geral"
 
 def _ler_combustivel_oficial(caminho_comb):
-    # Filiais que passaram por tools.injetar_compra_direta ganham abas extras
+    # Filiais que passaram por src.injetar_compra_direta ganham abas extras
     # ("Resumo Geral", "Compra Direta...") na frente da aba de transações, então
     # a aba de índice 0 (padrão do pd.read_excel) nem sempre é "Dados Brutos".
     if not os.path.exists(caminho_comb):
@@ -86,7 +86,7 @@ def _ler_combustivel_oficial(caminho_comb):
 
 def _compra_direta_info(caminho_comb):
     """(tem_combustivel_fora, tem_arla_fora) para o mês, lendo a aba real
-    injetada por tools.injetar_compra_direta — em vez de uma lista fixa de
+    injetada por src.injetar_compra_direta — em vez de uma lista fixa de
     filiais, que fica desatualizada assim que a compra direta muda de filial
     de um mês para o outro (caso real: Londrina, Sinop, Cuiabá e Porto Alegre
     tiveram compra direta em Julho/2026 sem estar em nenhuma lista fixa)."""
@@ -106,7 +106,7 @@ def _compra_direta_info(caminho_comb):
 
 def _resumo_geral_totais(caminho_comb):
     """(total_truckpag, total_direta, total_real) da aba 'Resumo Geral' injetada
-    por tools.injetar_compra_direta, ou None se a filial não teve compra direta
+    por src.injetar_compra_direta, ou None se a filial não teve compra direta
     no mês (arquivo sem essa aba)."""
     if not os.path.exists(caminho_comb):
         return None

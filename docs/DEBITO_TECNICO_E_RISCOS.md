@@ -41,6 +41,16 @@ O comentário em `src/filial_mapping.py` (linhas ~16-17 e ~59) é explícito: *"
 
 Confirmado por busca em todo o repositório: nenhum arquivo `.py` lê `emails_filiais.csv`. `src/enviar_emails.py` consulta diretamente `torre.email_gritsch_filiais` no PostgreSQL. Isso já foi corrigido no [README.md](../README.md) e no [RUNBOOK_OPERACIONAL.md](RUNBOOK_OPERACIONAL.md), mas fica registrado aqui como risco: enquanto o CSV continuar existindo e sendo editado manualmente (como aconteceu nesta mesma revisão — havia um commit pendente atualizando contatos nele), alguém pode continuar assumindo por engano que é a fonte de verdade.
 
+### 19. ✅ RESOLVIDO — Compra direta fora da TruckPag podia fechar sem cobrar da filial
+
+Descoberto em 2026-08-28 rodando o fechamento real de Julho/2026 como teste. Duas falhas relacionadas:
+
+1. `tools/validar_retorno_fkms.py` só reconhecia "abastecimento por fora" como legítimo (em vez de erro) para uma lista fixa de 5-6 filiais hardcoded (`FILIAIS_ABAST_POR_FORA`/`FILIAIS_ARLA_POR_FORA`). Mas compra direta é um evento do mês, não uma característica fixa da filial — em Julho/2026, Londrina, Sinop, Cuiabá e Porto Alegre tiveram compra direta real sem estar em nenhuma lista, então um gestor que declarasse o valor corretamente seria rejeitado por engano.
+2. Mesmo para as filiais reconhecidas, a validação só comparava por placa contra o valor TruckPag — nunca conferia o total do FKM contra o TOTAL REAL (TruckPag + Direta). Como a compra direta é um valor de filial sem placa associada, uma compra direta parcial ou não declarada passava sem nenhum alerta. Com dados reais de Julho/2026: Itumbiara, Rio Verde, Curitiba, Cuiabá e Sinop fecharam ~R$ 20.193 abaixo do total real sem nenhum erro acusado.
+3. A causa raiz de fundo: `tools/injetar_compra_direta.py` (que gera a informação que os dois pontos acima consomem) era um passo **manual e opcional** do runbook ("se aplicável"), rodado separadamente depois de `fechar_mes.py` — fácil de esquecer, e desconectado do fluxo principal.
+
+Corrigido: (1)/(2) — `validar_retorno_fkms.py` agora lê a aba real "Compra Direta"/"Resumo Geral" do arquivo oficial em vez de listas fixas, e ganhou uma checagem de total por filial. (3) — o script foi movido para `src/injetar_compra_direta.py` e virou etapa automática 5 de `fechar_mes.py` (depois de frota/manutenção, para que a pasta de toda filial já exista). Ver [RUNBOOK_OPERACIONAL.md](RUNBOOK_OPERACIONAL.md#2-extração-e-geração-dos-relatórios-por-filial) e [ARQUITETURA.md](ARQUITETURA.md).
+
 ---
 
 ## 🟡 Médio — dívida técnica que não é bug ativo, mas custa tempo/confiança
