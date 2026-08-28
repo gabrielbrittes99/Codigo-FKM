@@ -81,6 +81,21 @@ FILIAIS_MANUT_POR_FORA = [
     "Gritsch Rondonópolis"
 ]
 
+COLUNAS_COMB_PADRAO = ["Placa", "Litragem", "Valor total", "Combustivel", "Hodometro/Horimetro", "Hodometro/Horimetro anterior", "Data da transacao"]
+
+def _ler_combustivel_oficial(caminho_comb):
+    # Filiais que passaram por tools.injetar_compra_direta ganham abas extras
+    # ("Resumo Geral", "Compra Direta...") na frente da aba de transações, então
+    # a aba de índice 0 (padrão do pd.read_excel) nem sempre é "Dados Brutos".
+    if not os.path.exists(caminho_comb):
+        return pd.DataFrame(columns=COLUNAS_COMB_PADRAO)
+    xl = pd.ExcelFile(caminho_comb)
+    sheet = "Dados Brutos" if "Dados Brutos" in xl.sheet_names else xl.sheet_names[0]
+    df = xl.parse(sheet)
+    if "Placa" not in df.columns:
+        return pd.DataFrame(columns=COLUNAS_COMB_PADRAO)
+    return df
+
 def auditar_arquivo(caminho_fkm, mes_ano_fkm):
     erros = []
     avisos = []
@@ -250,7 +265,7 @@ def auditar_arquivo(caminho_fkm, mes_ano_fkm):
     caminho_manut = os.path.join(branch_dir, f"Manutencao - {filial_acronym}.xlsx")
     
     df_frota = pd.read_excel(caminho_frota) if os.path.exists(caminho_frota) else pd.DataFrame(columns=["Placa"])
-    df_comb = pd.read_excel(caminho_comb) if os.path.exists(caminho_comb) else pd.DataFrame(columns=["Placa", "Litragem", "Valor total", "Combustivel", "Hodometro/Horimetro", "Hodometro/Horimetro anterior", "Data da transacao"])
+    df_comb = _ler_combustivel_oficial(caminho_comb)
     df_manut = pd.read_excel(caminho_manut) if os.path.exists(caminho_manut) else pd.DataFrame(columns=["Placa", "ValorTotal"])
     
     df_frota["Placa_Clean"] = df_frota["Placa"].astype(str).str.replace("-", "", regex=False).str.strip().str.upper()
