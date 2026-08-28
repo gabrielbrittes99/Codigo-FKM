@@ -68,7 +68,6 @@ FILIAIS_MANUT_POR_FORA = [
 
 COLUNAS_COMB_PADRAO = ["Placa", "Litragem", "Valor total", "Combustivel", "Hodometro/Horimetro", "Hodometro/Horimetro anterior", "Data da transacao"]
 NOME_ABA_COMPRA_DIRETA = "Compra Direta (Fora TruckPag)"
-NOME_ABA_RESUMO_GERAL = "Resumo Geral"
 
 def _ler_combustivel_oficial(caminho_comb):
     # Filiais que passaram por src.injetar_compra_direta ganham abas extras
@@ -104,29 +103,50 @@ def _compra_direta_info(caminho_comb):
     return bool(tem_combustivel), bool(tem_arla)
 
 
-def _resumo_geral_totais(caminho_comb):
-    """(total_truckpag, total_direta, total_real) da aba 'Resumo Geral' injetada
-    por src.injetar_compra_direta, ou None se a filial não teve compra direta
-    no mês (arquivo sem essa aba)."""
-    if not os.path.exists(caminho_comb):
-        return None
-    xl = pd.ExcelFile(caminho_comb)
-    if NOME_ABA_RESUMO_GERAL not in xl.sheet_names:
-        return None
-    df = xl.parse(NOME_ABA_RESUMO_GERAL, header=None)
-    valores = {}
-    for _, row in df.iterrows():
-        rotulo = str(row.iloc[0]) if pd.notna(row.iloc[0]) else ""
-        valor = row.iloc[1] if len(row) > 1 else None
-        if pd.isna(valor):
+def resumo_compra_direta_do_mes():
+    """Lista, por filial, quanto teve de compra direta fora da TruckPag este
+    mês — puramente informativo (filial, combustível, Arla), sem tentar
+    conferir contra o que o gestor declarou no FKM. Varre direto as pastas
+    de `Dados Tratados/{Mês Ano}/`, então funciona mesmo antes de qualquer
+    FKM ser devolvido — não depende de `dados/retornados/`.
+
+    A compra direta é um lançamento financeiro sem placa associada, então
+    tentar bater o valor exato contra uma placa específica do FKM não dá
+    resultado confiável (era o que a auditoria fazia antes; ficou difícil
+    de interpretar e gerava rejeição sem um jeito claro de corrigir — ver
+    item 19 do DEBITO_TECNICO_E_RISCOS.md). Aqui só reporta quanto e onde,
+    pra cobrar manualmente da filial certa."""
+    pasta_periodo = os.path.join(config.DIRETORIO_BASE_SAIDA, config.PASTA_PERIODO)
+    if not os.path.isdir(pasta_periodo):
+        return []
+
+    resultados = []
+    for nome_pasta in sorted(os.listdir(pasta_periodo)):
+        caminho_pasta = os.path.join(pasta_periodo, nome_pasta)
+        if not os.path.isdir(caminho_pasta):
             continue
-        if "TruckPag" in rotulo:
-            valores["truckpag"] = float(valor)
-        elif "Compra direta" in rotulo:
-            valores["direta"] = float(valor)
-        elif "TOTAL REAL" in rotulo:
-            valores["total_real"] = float(valor)
-    return valores if "total_real" in valores else None
+        candidatos = glob.glob(os.path.join(caminho_pasta, "Combustivel - *.xlsx"))
+        if not candidatos:
+            continue
+        xl = pd.ExcelFile(candidatos[0])
+        if NOME_ABA_COMPRA_DIRETA not in xl.sheet_names:
+            continue
+        df = xl.parse(NOME_ABA_COMPRA_DIRETA)
+        if "Natureza" not in df.columns or "Valor" not in df.columns:
+            continue
+        df = df[df["Natureza"].astype(str).str.upper() != "TOTAL COMPRA DIRETA"]
+        natureza = df["Natureza"].astype(str).str.upper()
+        eh_arla = natureza.str.contains("ARLA", na=False)
+        valor_combustivel = float(df.loc[~eh_arla, "Valor"].sum())
+        valor_arla = float(df.loc[eh_arla, "Valor"].sum())
+        if valor_combustivel <= 0 and valor_arla <= 0:
+            continue
+        resultados.append({
+            "filial": nome_pasta,
+            "combustivel": valor_combustivel,
+            "arla": valor_arla,
+        })
+    return resultados
 
 def auditar_arquivo(caminho_fkm, mes_ano_fkm):
     erros = []
@@ -138,7 +158,6 @@ def auditar_arquivo(caminho_fkm, mes_ano_fkm):
         "combustivel": [],
         "manutencao": [],
         "hodometro": [],
-        "abast_por_fora": [],  # Abastecimentos por fora do prestador principal
         "manut_por_fora": []   # Manutenções com fundo fixo (emergenciais sem NF)
     }
     
@@ -484,27 +503,6 @@ def auditar_arquivo(caminho_fkm, mes_ano_fkm):
     # Substituir df_fkm pela versão agrupada para as validações seguintes
     df_fkm = df_fkm_grouped
 
-    # --- A2. Validação do total de compra direta (fora da TruckPag) ---
-    # A comparação por placa mais abaixo só pega "faltou uma placa inteira" —
-    # a compra direta é um valor de filial, sem placa associada, e pode ser
-    # somada em qualquer linha (ou em nenhuma). Por isso comparamos também o
-    # total do FKM inteiro contra o TOTAL REAL (TruckPag + Direta) da aba
-    # "Resumo Geral", senão uma compra direta parcial ou não declarada passa
-    # sem nenhum alerta.
-    resumo_direta = _resumo_geral_totais(caminho_comb)
-    if resumo_direta and resumo_direta.get("direta", 0.0) > 1.0:
-        total_fkm_declarado = float(df_fkm["Valor Comb."].sum()) + float(df_fkm["Arla"].sum())
-        total_real = resumo_direta["total_real"]
-        falta = total_real - total_fkm_declarado
-        if falta > 10.0:  # tolerância de arredondamento
-            erros.append(
-                f"Compra direta fora da TruckPag não coberta pelo FKM: a filial teve "
-                f"R$ {resumo_direta['direta']:,.2f} em compra direta este mês (aba "
-                f"'{NOME_ABA_COMPRA_DIRETA}' do arquivo oficial), mas o total declarado no FKM "
-                f"(R$ {total_fkm_declarado:,.2f}) fica R$ {falta:,.2f} abaixo do TOTAL REAL do mês "
-                f"(R$ {total_real:,.2f}). Confira se o gestor somou a compra direta em alguma placa."
-            )
-
     # Filtrar Arla em combustível oficial
     df_comb_arla = df_comb[df_comb["Combustivel"].str.contains("Arla", case=False, na=False)].groupby("Placa_Clean").agg(
         Arla_Liters_Source=("Litragem", "sum"),
@@ -545,22 +543,12 @@ def auditar_arquivo(caminho_fkm, mes_ano_fkm):
         div_pos_arla = r["Diff_Arla"] > 0.5
         div_neg_arla = r["Diff_Arla"] < -0.5
 
-        # 1. Tratar abastecimentos por fora (apenas diferenças positivas)
-        if (div_pos_litros or div_pos_valor or div_pos_arla) and filial_abast_por_fora:
-            valores_corretos["abast_por_fora"].append({
-                "placa": placa,
-                "litros_fkm": r['Litros Comb.'],
-                "litros_oficial": r['Fuel_Liters_Source'],
-                "litros_por_fora": max(0.0, r['Diff_Litros']),
-                "valor_fkm": r['Valor Comb.'],
-                "valor_oficial": r['Fuel_Valor_Source'],
-                "valor_por_fora": max(0.0, r['Diff_Valor']),
-                "arla_fkm": r['Arla'],
-                "arla_oficial": r['Arla_Valor_Source'],
-                "arla_por_fora": max(0.0, r['Diff_Arla'])
-            })
-        else:
-            # Se for positivo mas não é filial por fora, é erro
+        # 1. Combustível/litros: diferença a maior não vira erro quando a filial
+        # tem compra direta fora da TruckPag este mês — provavelmente é o
+        # gestor somando aquele custo na placa, e não dá pra conferir o valor
+        # exato porque a compra direta não tem placa associada no financeiro
+        # (ver o resumo de compra direta do mês, seção separada no final).
+        if not filial_abast_por_fora:
             if div_pos_litros:
                 valores_corretos["combustivel"].append({
                     "placa": placa,
@@ -569,7 +557,7 @@ def auditar_arquivo(caminho_fkm, mes_ano_fkm):
                     "valor_oficial": r['Fuel_Liters_Source']
                 })
                 erros.append(f"Combustível Placa {placa}: Litragem divergente (a maior)! Preenchido: {r['Litros Comb.']:.2f}L | Oficial: {r['Fuel_Liters_Source']:.2f}L (Dif: {r['Diff_Litros']:.2f}L)")
-            
+
             if div_pos_valor:
                 valores_corretos["combustivel"].append({
                     "placa": placa,
@@ -579,28 +567,15 @@ def auditar_arquivo(caminho_fkm, mes_ano_fkm):
                 })
                 erros.append(f"Combustível Placa {placa}: Custo de combustível divergente (a maior)! Preenchido: R$ {r['Valor Comb.']:.2f} | Oficial: R$ {r['Fuel_Valor_Source']:.2f} (Dif: R$ {r['Diff_Valor']:.2f})")
 
-            if div_pos_arla:
-                if filial_arla_por_fora:
-                    valores_corretos["abast_por_fora"].append({
-                        "placa": placa,
-                        "litros_fkm": 0,
-                        "litros_oficial": 0,
-                        "litros_por_fora": 0,
-                        "valor_fkm": 0,
-                        "valor_oficial": 0,
-                        "valor_por_fora": 0,
-                        "arla_fkm": r['Arla'],
-                        "arla_oficial": r['Arla_Valor_Source'],
-                        "arla_por_fora": r['Diff_Arla']
-                    })
-                else:
-                    valores_corretos["combustivel"].append({
-                        "placa": placa,
-                        "tipo": "Arla",
-                        "valor_fkm": r['Arla'],
-                        "valor_oficial": r['Arla_Valor_Source']
-                    })
-                    erros.append(f"Arla Placa {placa}: Valor divergente (a maior)! Preenchido: R$ {r['Arla']:.2f} | Oficial: R$ {r['Arla_Valor_Source']:.2f} (Dif: R$ {r['Diff_Arla']:.2f})")
+        # Arla: mesma lógica, mas a lista de filiais "por fora" é a de Arla
+        if div_pos_arla and not filial_arla_por_fora:
+            valores_corretos["combustivel"].append({
+                "placa": placa,
+                "tipo": "Arla",
+                "valor_fkm": r['Arla'],
+                "valor_oficial": r['Arla_Valor_Source']
+            })
+            erros.append(f"Arla Placa {placa}: Valor divergente (a maior)! Preenchido: R$ {r['Arla']:.2f} | Oficial: R$ {r['Arla_Valor_Source']:.2f} (Dif: R$ {r['Diff_Arla']:.2f})")
 
         # 2. Diferenças negativas (sempre são erros, pois FKM < Oficial)
         if div_neg_litros:
@@ -931,45 +906,28 @@ def main():
         print(f"{YELLOW}{BOLD}💰 TOTAL GERAL FUNDO FIXO: R$ {total_geral_fundo_fixo:,.2f}{RESET}")
         print(f"{YELLOW}{'=' * 80}{RESET}")
 
-    # ========== ABASTECIMENTOS POR FORA ==========
-    # Consolidar abastecimentos por fora de todas as filiais
-    filiais_com_abast_fora = []
-    for r in resultados:
-        if r["valores_corretos"]["abast_por_fora"]:
-            filiais_com_abast_fora.append(r)
+    # ========== COMPRA DIRETA DO MÊS (fora da TruckPag) ==========
+    # Puramente informativo — filial, combustível e Arla comprados fora da
+    # rede credenciada este mês, direto da aba oficial. Não confere contra o
+    # que o gestor declarou no FKM (ver resumo_compra_direta_do_mes()).
+    compra_direta = resumo_compra_direta_do_mes()
 
-    if filiais_com_abast_fora:
+    if compra_direta:
         print(f"\n{CYAN}{'=' * 80}{RESET}")
-        print(f"{CYAN}{BOLD}⛽ ABASTECIMENTOS POR FORA (Não centralizados no prestador){RESET}")
+        print(f"{CYAN}{BOLD}⛽ COMPRA DIRETA DO MÊS (Fora da TruckPag){RESET}")
         print(f"{CYAN}{'=' * 80}{RESET}")
-        print(f"{CYAN}Filiais que abastecem fora do prestador principal - Valores para mapeamento e cobrança{RESET}\n")
+        print(f"{CYAN}Informativo — não confere contra o FKM, só aponta filial e valor pra cobrança{RESET}\n")
 
-        total_geral_por_fora = 0
-
-        for r in filiais_com_abast_fora:
-            print(f"{CYAN}{'─' * 80}{RESET}")
-            print(f"📄 {r['arquivo']}")
-            print(f"   Filial: {BOLD}{r['filial']}{RESET}")
-            print(f"{CYAN}{'─' * 80}{RESET}\n")
-
-            total_filial_por_fora = 0
-
-            print(f"  {'Placa':<12} {'Prestador':<15} {'FKM Total':<15} {'Por Fora':<15}")
-            print(f"  {'-' * 60}")
-
-            for abast in r["valores_corretos"]["abast_por_fora"]:
-                # Só mostrar se tiver diferença significativa
-                if abs(abast['valor_por_fora']) > 1.0:
-                    total_filial_por_fora += abast['valor_por_fora']
-                    total_geral_por_fora += abast['valor_por_fora']
-
-                    print(f"  {abast['placa']:<12} R$ {abast['valor_oficial']:>10.2f}  R$ {abast['valor_fkm']:>10.2f}  R$ {abast['valor_por_fora']:>10.2f}")
-
-            print(f"  {'-' * 60}")
-            print(f"  {'TOTAL FILIAL:':<28} {'':<15} R$ {total_filial_por_fora:>10.2f}\n")
-
-        print(f"{CYAN}{'=' * 80}{RESET}")
-        print(f"{CYAN}{BOLD}💰 TOTAL GERAL POR FORA: R$ {total_geral_por_fora:,.2f}{RESET}")
+        print(f"  {'Filial':<22} {'Combustível':>15} {'Arla':>13} {'Total':>15}")
+        print(f"  {'-' * 68}")
+        total_combustivel_mes = total_arla_mes = 0.0
+        for item in compra_direta:
+            total_item = item["combustivel"] + item["arla"]
+            total_combustivel_mes += item["combustivel"]
+            total_arla_mes += item["arla"]
+            print(f"  {item['filial']:<22} R$ {item['combustivel']:>10,.2f}  R$ {item['arla']:>8,.2f}  R$ {total_item:>10,.2f}")
+        print(f"  {'-' * 68}")
+        print(f"  {'TOTAL:':<22} R$ {total_combustivel_mes:>10,.2f}  R$ {total_arla_mes:>8,.2f}  R$ {total_combustivel_mes + total_arla_mes:>10,.2f}")
         print(f"{CYAN}{'=' * 80}{RESET}")
 
     # ========== CUSTOS DE EXCEÇÃO PENDENTES (independente dos FKMs recebidos) ==========
@@ -983,8 +941,8 @@ def main():
     print(f"  {RED}🚨 Rejeitados: {len(rejeitados)}{RESET}")
     if filiais_com_manut_fora:
         print(f"  {YELLOW}🔧 Com fundo fixo: {len(filiais_com_manut_fora)} ({BOLD}R$ {total_geral_fundo_fixo:,.2f}{RESET}{YELLOW}){RESET}")
-    if filiais_com_abast_fora:
-        print(f"  {CYAN}⛽ Com abast. por fora: {len(filiais_com_abast_fora)} ({BOLD}R$ {total_geral_por_fora:,.2f}{RESET}{CYAN}){RESET}")
+    if compra_direta:
+        print(f"  {CYAN}⛽ Compra direta fora da TruckPag: {len(compra_direta)} filial(is) ({BOLD}R$ {total_combustivel_mes + total_arla_mes:,.2f}{RESET}{CYAN}){RESET}")
     print(f"{'=' * 80}")
 
 def _exibir_excecoes_manutencao_pendentes(resultados):
